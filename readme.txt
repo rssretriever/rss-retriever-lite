@@ -1,9 +1,9 @@
 === RSS Retriever Lite ===
-Tags: rss, autoblogging, aggregator, wpml, woocommerce
+Tags: rss, autoblogging, polylang, wpml, woocommerce
 Requires at least: 5.0
 Tested up to: 6.8
 Requires PHP: 7.4
-Stable tag: 1.0.2
+Stable tag: 1.1.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -17,8 +17,8 @@ RSS Retriever Lite is a feed importer for WordPress. It allows you to import and
 
 - Full support for RSS and Atom feeds
 - YouTube video feeds (channels and playlists)
-- Google Product feed import
-- Yandex Product feed import
+- Google Product Feed import
+- YML (Yandex Market Language) feed import
 - Support for compressed feeds (ZIP, GZIP, BZ2)
 - Automatic feed updates
 - Advanced post filtering
@@ -26,6 +26,7 @@ RSS Retriever Lite is a feed importer for WordPress. It allows you to import and
 - Feed translation via Google, Yandex and DeepL APIs
 - Support for Polylang and WPML multilingual plugins
 - Support for custom post types and taxonomies (e.g. WooCommerce products)
+- XML tag mapping to WordPress custom fields
 - Automatic WooCommerce tag and category generation
 - Smart autotagging and categorization
 - Fully customizable HTML post templates with placeholders
@@ -36,7 +37,6 @@ RSS Retriever Lite is a feed importer for WordPress. It allows you to import and
 - RSS media attachment support
 - PNG image conversion to JPEG and WebP
 - WordPress media library integration
-- Automatic conversion of character encodings to UTF-8
 - HTML cleanup and sanitization
 - Custom HTML tag removal
 - Custom user-agent and HTTP header support
@@ -64,6 +64,25 @@ The plugin can import any supported feed (RSS, Google Product Feed, Yandex Produ
 To do this, select **product** in the **Post type** dropdown. After that, in the **Custom taxonomies** section you will see additional text fields: **Brands**, **Product categories**, **Product tags**, and **Product shipping classes**. You can enter values here separated by commas and/or use placeholders. For example, `%xml_tags[g:price]%` when importing from a Google Product Feed, or `%xml_tags[price]%` when importing from a Yandex Market (YML) feed.
 
 Optionally, you can enable the **Categories to WooCommerce** checkbox to automatically convert categories from an RSS feed into WooCommerce product categories.
+
+= How do I map XML tag values into WooCommerce product fields? =
+If you are importing a product feed (for example, a Yandex Market / YML feed), you can save any XML tag directly into a WooCommerce product custom field using the Custom fields textarea.
+
+Each rule must follow the format:
+
+`xml_tag_name->custom_field_name`
+
+One rule per line.
+
+For example, Yandex Market feeds usually provide the product price in the <price> tag. WooCommerce stores product prices in the _price meta key. To automatically save the imported price into the WooCommerce product price field, use the following rule:
+
+`price->_price`
+
+This tells the plugin to take the value of the <price> XML tag and write it into the WooCommerce _price custom field during import.
+
+You can add as many rules as you want. For instance, to save the old price (<oldprice>) into WooCommerce’s regular price field, add:
+
+`oldprice->_regular_price`
 
 = Can the plugin automatically assign tags to imported posts? =
 Yes. If you enable the **Auto tags** option, the plugin will scan the content of each imported post and automatically apply tags that already exist in your WordPress site whenever matching words are found in the text.
@@ -145,6 +164,12 @@ language codes. These services are used only if the user configures an API key.
 
 == Changelog ==
 
+= 1.1.1 =
+* Fixed warning
+
+= 1.1.0 =
+* Added XML tag mapping to WordPress custom fields
+
 = 1.0.2 =
 * Fix feed options saving: restored original logic for text fields and checkboxes, added wp_unslash() and sanitize_text_field() for security
 
@@ -156,11 +181,17 @@ language codes. These services are used only if the user configures an API key.
 
 == Upgrade Notice ==
 
+= 1.1.1 =
+* Fixed warning
+
+= 1.1.0 =
+* XML tag mapping to WordPress custom fields
+
 = 1.0.2 =
-Fix feed options saving: restored original logic for text fields and checkboxes, added wp_unslash() and sanitize_text_field() for security
+* Fix feed options saving: restored original logic for text fields and checkboxes, added wp_unslash() and sanitize_text_field() for security
 
 = 1.0.1 =
-%youtube_video[keyword]% shortcode added
+* Added %youtube_video[keyword]% shortcode
 
 = 1.0.0 =
-Initial release
+* Initial release

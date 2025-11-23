@@ -1,7 +1,7 @@
 <?php
 /*
 Plugin Name: RSS Retriever Lite
-Version: 1.0.2
+Version: 1.1.1
 Description: RSS Retriever Lite is a lightweight WordPress plugin for importing and managing RSS and Atom feeds. It supports Google and Yandex product feeds, YouTube and Vimeo video feeds, automatic updates, scheduling, filtering, translation, and integration with WooCommerce, Polylang and WPML.
 Author: RSS Retriever Team
 Plugin URI: https://www.rssretriever.com/
@@ -837,7 +837,7 @@ function rssrtvr_lite_save_image($image_url, $preferred_name = '', $width = -1, 
     $image_info = @getimagesize($wp_upload_dir['path'] . '/' . $temp_name);
     if ($image_info !== false) {
         $image_type = $image_info[2];
-        $rssrtvr_lite->log('Save image "' . esc_html($image_url) . '"');
+        $rssrtvr_lite->log('Save image "' . $image_url . '"');
         if ($image_type === IMAGETYPE_JPEG || $image_type === IMAGETYPE_JPEG2000) {
             $image = @imagecreatefromjpeg($wp_upload_dir['path'] . '/' . $temp_name);
             $rssrtvr_lite->log('JPEG format detected');
@@ -1417,7 +1417,7 @@ function rssrtvr_lite_set_feed_options($options) {
             } elseif (is_int($value)) {
                 $result[$option] = intval($input);
             } else {
-                $result[$option] = sanitize_text_field($input);
+                $result[$option] = wp_unslash($input);
             }
         } else {
             if (is_array($value)) {
@@ -1628,8 +1628,7 @@ function rssrtvr_lite_syndicator_log_menu() {
 }
 
 function rssrtvr_lite_plugins_action_link($links) {
-    $links[] = '<a href="' . esc_url(get_admin_url(null, 'admin.php?page=rssretriever')) . '">Syndicator</a>';
-    $links[] = '<a href="?rssrtvr_lite_update">Update</a>';
+    $links[] = '<a href="' . esc_url(get_admin_url(null, 'admin.php?page=rssretriever_lite')) . '">Syndicator</a>';
     return $links;
 }
 
@@ -1672,6 +1671,8 @@ class RSSRtvr_LITE_Syndicator {
     public $global_options = [];
     public $edit_existing;
     public $current_category;
+    public $current_custom_field;
+    public $current_custom_field_attr = [];
     public $generator;
     public $xml_parse_error;
     public $show_report = false;
@@ -2059,6 +2060,7 @@ class RSSRtvr_LITE_Syndicator {
             'post_slug_template'        => '%post_title%',
             'post_content_template'     => '%post_content%',
             'post_excerpt_template'     => '',
+            'custom_fields'             => '',
             'translator'                => 'none',
             'yandex_translation_dir'    => '',
             'google_translation_source' => '',
@@ -2180,11 +2182,9 @@ class RSSRtvr_LITE_Syndicator {
             'enclosure_url'     => '',
             'enclosure_type'    => '',
             'link'              => '',
-            'gpt_keywords'      => false,
-            'gpt_keyphrase'     => false,
         ];
 
-        $this->xml_tags               = [];
+        $this->xml_tags                = [];
         $rssrtvr_lite_images_to_attach = [];
         $rssrtvr_lite_urls_to_check    = [];
     }
@@ -2297,7 +2297,7 @@ class RSSRtvr_LITE_Syndicator {
         );
 
         $media_thumbnail = $this->post['media_thumbnail'];
-        $content         = preg_replace_callback(
+        $content = preg_replace_callback(
             '/%media_thumbnail\[(.*?)\]%/s',
             function ($matches) use ($media_thumbnail) {
                 $cf = intval($matches[1]);
@@ -2309,7 +2309,7 @@ class RSSRtvr_LITE_Syndicator {
         );
 
         $media_content = $this->post['media_content'];
-        $content       = preg_replace_callback(
+        $content = preg_replace_callback(
             '/%media_content\[(.*?)\]%/s',
             function ($matches) use ($media_content) {
                 $cf = intval($matches[1]);
@@ -2320,7 +2320,7 @@ class RSSRtvr_LITE_Syndicator {
             $content
         );
 
-        $content        = preg_replace_callback(
+        $content = preg_replace_callback(
             '/%youtube_video\[(.*?)\]%/s',
             function ($matches) {
                 return rssrtvr_lite_get_youtube_video($this->parse_placeholders($matches[1]));
@@ -2329,7 +2329,6 @@ class RSSRtvr_LITE_Syndicator {
         );
 
         if (isset($this->post['link'])) {
-            $content = str_replace('####post_link####', $this->post['link'], $content);
             $content = str_replace('%link%', $this->post['link'], $content);
         }
 
@@ -2360,7 +2359,7 @@ class RSSRtvr_LITE_Syndicator {
                 }
                 $offset = $offset_secs;
             }
-            $epoch = $epoch + $offset;
+            $epoch += $offset;
             return $epoch;
         } else {
             return -1;
@@ -2370,7 +2369,7 @@ class RSSRtvr_LITE_Syndicator {
     function log($message) {
         if (! $this->preview) {
             // phpcs:ignore WordPress.DateTime.RestrictedFunctions.date_date
-            $this->parse_feed_log .= '[' . esc_html(date('d-m-y h:i:s')) . '] ' . esc_html($message) . PHP_EOL;
+            $this->parse_feed_log .= '[' . wp_unslash(date('d-m-y h:i:s')) . '] ' . wp_unslash($message) . PHP_EOL;
             update_option(RSSRTVR_LITE_LOG, $this->parse_feed_log);
         }
     }
@@ -2811,8 +2810,9 @@ class RSSRtvr_LITE_Syndicator {
 
     function startElement($parser, $name, $attribs) {
         $this->tag = $name;
-
+        $this->current_custom_field_attr[$name] = $attribs;
         $this->xml_tags[strtolower($name)]['attr'] = $attribs;
+
         if (! isset($this->xml_tags[strtolower($name)]['val'])) {
             $this->xml_tags[strtolower($name)]['val'] = '';
         }
@@ -2883,23 +2883,49 @@ class RSSRtvr_LITE_Syndicator {
 
     function endElement($parser, $name) {
         $this->new_tag = true;
+
         if ($name === 'CATEGORY') {
             $category = trim(rssrtvr_lite_fix_white_spaces($this->current_category));
+
             if (mb_strlen($category) > 0) {
                 $this->post['categories'][] = $category;
             }
             $this->current_category = '';
         }
 
+        $custom_field_name = $this->getCustomField($name);
+
+        if (strlen($custom_field_name)) {
+
+            if (isset($this->post['custom_fields'][$custom_field_name])) {
+
+                if (!is_array($this->post['custom_fields'][$custom_field_name])) {
+                    $this->post['custom_fields'][$custom_field_name] = [$this->post['custom_fields'][$custom_field_name]];
+                    $this->post['custom_fields_attr'][$custom_field_name] = [$this->post['custom_fields_attr'][$custom_field_name]];
+                }
+                $this->post['custom_fields'][$custom_field_name][] = $this->current_custom_field;
+                $this->post['custom_fields_attr'][$custom_field_name][] = $this->current_custom_field_attr[$name];
+            } else {
+                $this->post['custom_fields'][$custom_field_name] = $this->current_custom_field;
+                $this->post['custom_fields_attr'][$custom_field_name] = $this->current_custom_field_attr[$name];
+            }
+            $this->current_custom_field_attr[$name] = [];
+            $this->current_custom_field = '';
+        }
+
         if (($name === $this->element_tag)) {
             --$this->insideitem;
+
             if ($this->insideitem <= 0) {
                 ++$this->posts_found;
+
                 if (($this->count < $this->max)) {
+
                     if ($this->preview) {
                         $this->displayPost();
                         ++$this->count;
                     } else {
+
                         if (! $this->failure) {
                             $this->insertPost();
                         }
@@ -2920,8 +2946,36 @@ class RSSRtvr_LITE_Syndicator {
         }
     }
 
+    function getCustomField($tag_name) {
+        if (($this->current_feed['options']['custom_fields'] ?? '') !== '') {
+            $custom_fields_array = explode("\n", stripslashes(trim($this->current_feed['options']['custom_fields'])));
+            foreach ($custom_fields_array as $item) {
+                $item = stripslashes($item);
+                @list($tag, $name) = explode('->', $item);
+
+                if (!isset($tag) || !isset($name)) {
+                    continue;
+                }
+                $tag = mb_strtoupper(trim($tag));
+
+                if ($tag === $tag_name) {
+                    return trim($name);
+                }
+            }
+        }
+        return false;
+    }
+
     function charData($parser, $data) {
         if ($this->insideitem >= 0) {
+
+            if (!$this->preview) {
+                $custom_field_name = $this->getCustomField($this->tag);
+                if ($custom_field_name && mb_strlen(trim($data))) {
+                    $this->current_custom_field .= html_entity_decode($data, ENT_QUOTES);
+                }
+            }
+
             $xml_section_tags = explode(',', trim(strtoupper($this->current_feed['options']['xml_section_tags'])));
 
             if (in_array($data, ['&', '<', '|', chr(9), chr(10), chr(11), chr(13)])) {
@@ -3552,7 +3606,7 @@ class RSSRtvr_LITE_Syndicator {
         if ($this->current_feed['options']['base_date'] === 'syndication') {
             $post_date = time();
         } else {
-            $post_date = ((int) $this->post['post_date']);
+            $post_date = (int) $this->post['post_date'];
         }
 
         $post_date                      += 60 * ($this->current_feed['options']['date_min'] + wp_rand(0, $this->current_feed['options']['date_max'] - $this->current_feed['options']['date_min']));
@@ -3995,6 +4049,19 @@ class RSSRtvr_LITE_Syndicator {
             return;
         }
 
+        if (isset($this->post['custom_fields'])) {
+            foreach ($this->post['custom_fields'] as $name => $value) {
+                rssrtvr_lite_disable_kses();
+                if (is_array($value)) {
+                    $value = implode(',', $value);
+                }
+                if (!add_post_meta($post_id, $name, $value, true)) {
+                    update_post_meta($post_id, $name, $value);
+                }
+                rssrtvr_lite_enable_kses();
+            }
+        }
+
         $args       = [
             'public'   => true,
             '_builtin' => false,
@@ -4274,13 +4341,7 @@ class RSSRtvr_LITE_Syndicator {
                                 <?php
                                 echo '<input type="text" name="url" style="width:100%" value="' . esc_html(esc_attr($this->current_feed_url)) . '">';
                                 ?>
-                                <p class="description">The URL of the feed
-                                    <?php
-                                    if (! empty($this->document_type)) {
-                                        echo ' (source: ' . esc_html($this->document_type) . ')';
-                                    }
-                                    ?>
-                                    .</p>
+                                <p class="description">The URL of the feed.</p>
                             </td>
                         </tr>
 
@@ -4370,7 +4431,7 @@ class RSSRtvr_LITE_Syndicator {
                                     </td>
                                 </tr>
                             </table>
-                            <p class="description">Assign WordPress <em>custom taxonomies</em>. The post template <em>placeholders</em> are allowed here.</p>
+                            <p class="description">Assign WordPress <em>custom taxonomies</em>. Placeholders are allowed here [<a href="https://www.rssretriever.com/documentation/#custom-taxonomies" target="_blank">?</a>]</p>
                         </td>
                     </tr>
 
@@ -4501,7 +4562,7 @@ class RSSRtvr_LITE_Syndicator {
                                 echo '<option ' . (($settings['undefined_category'] === 'drop') ? 'selected ' : '') . 'value="drop">Do not syndicate post that doesn\'t match at least one category defined above</option>';
                                 ?>
                             </select>
-                            <p class="description">This option defines what the RSS Retriever Lite syndicator have to do if none of the post categories mutch the predefined defined ones.</p>
+                            <p class="description">This option defines what the RSS Retriever Lite syndicator have to do if none of the post categories mutch the predefined defined ones [<a href="https://www.rssretriever.com/documentation/#undefined-categories" target="_blank">?</a>]</p>
                         </td>
                     </tr>
 
@@ -4612,7 +4673,7 @@ class RSSRtvr_LITE_Syndicator {
                                 }
                                 ?>
                             </select>
-                            <p class="description">Assign a Polylang language to every post or page generated from this content source.</p>
+                            <p class="description">Assign a Polylang language to every post or page generated from this content source [<a href="https://www.rssretriever.com/documentation/#polylang-language" target="_blank">?</a>]</p>
                         </td>
                     </tr>
 
@@ -4645,7 +4706,7 @@ class RSSRtvr_LITE_Syndicator {
                                 }
                                 ?>
                             </select>
-                            <p class="description">Assign a WPML language to every post or page generated from this content source.</p>
+                            <p class="description">Assign a WPML language to every post or page generated from this content source [<a href="https://www.rssretriever.com/documentation/#wpml-language" target="_blank">?</a>]</p>
                         </td>
                     </tr>
                 </table>
@@ -4666,7 +4727,7 @@ class RSSRtvr_LITE_Syndicator {
                             <?php
                             echo '<input type="checkbox" name="store_images" id="store_images" ' . (($settings['store_images'] === 'on') ? 'checked ' : '') . '>';
                             ?>
-                            <label for="store_images">if checked, all images will be copied into the default uploads folder.</label>
+                            <label for="store_images">if checked, all images will be copied into the default uploads folder [<a href="https://www.rssretriever.com/documentation/#store-images-locally" target="_blank">?</a>]</label>
                         </td>
                     </tr>
 
@@ -4690,7 +4751,7 @@ class RSSRtvr_LITE_Syndicator {
                             <?php
                             echo '<input type="checkbox" name="add_to_media_library" id="add_to_media_library" ' . (($settings['add_to_media_library'] === 'on') ? 'checked ' : '') . '>';
                             ?>
-                            <label for="add_to_media_library">if checked, all images will be added to the WordPress Media Library.</label>
+                            <label for="add_to_media_library">if checked, all images will be added to the WordPress Media Library [<a href="https://www.rssretriever.com/documentation/#add-to-media-library" target="_blank">?</a>]</label>
                         </td>
                     </tr>
 
@@ -4820,8 +4881,8 @@ class RSSRtvr_LITE_Syndicator {
                             <?php
                             echo '<textarea style="width:100%; height:20em; background-color:white;" wrap="on" name="post_content_template" id="post_content_template">' . esc_html(stripslashes($settings['post_content_template'])) . '</textarea>';
                             echo '<p class="description">Post content template. Define the desired HTML layout for your post body here. Make sure it\'s not empty. The default template value is <code>%post_content%</code>.</p>';
-                            if (! strlen($settings['post_content_template'])) {
-                                echo '<p>&#x26A0; Your post content template is empty. This means that the generated post will not have a content.</p>';
+                            if (!strlen($settings['post_content_template'])) {
+                                echo '<p>&#x26A0; Your post content template is empty. This means that the generated post will not have content.</p>';
                             }
                             ?>
                         </td>
@@ -4866,12 +4927,8 @@ class RSSRtvr_LITE_Syndicator {
                                 </ul>
                             </div>
                             <p class="description">
-                                <strong>Usage tips:</strong> Placeholders can be used in post title, slug, content, and excerpt templates. For indexed placeholders, use a number inside brackets (e.g. <code>%media_thumbnail[0]</code>). For custom date formats, use PHP date format strings (e.g. <code>%post_date[Y-m-d]</code>). For XML tags and attributes, use the tag name and attribute name (e.g. <code>%xml_tags[author]</code>, <code>%xml_tags_attr[media:content][url]</code>).
-                            </p>
-                            <p class="description">
-                                💡 <a href="https://www.rssretriever.com/documentation/#templates" target="_blank">
-                                    <?php esc_html_e('Examples and usage details', 'rss-retriever-lite'); ?>
-                                </a>
+                                <strong>Usage tips:</strong> Placeholders can be used in post title, slug, content, and excerpt templates. For indexed placeholders, use a number inside brackets (e.g. <code>%media_thumbnail[0]</code>). For custom date formats, use PHP date format strings (e.g. <code>%post_date[Y-m-d]</code>). For XML tags and attributes, use the tag name and attribute name (e.g. <code>%xml_tags[author]</code>, <code>%xml_tags_attr[media:content][url]</code>)
+                                [<a href="https://www.rssretriever.com/documentation/#templates" target="_blank">?</a>]
                             </p>
                         </td>
                     </tr>
@@ -4893,7 +4950,7 @@ class RSSRtvr_LITE_Syndicator {
                             <?php
                             echo '<input type="text" name="strip_tags" style="margin:0;width:100%;" value="' . esc_html(stripslashes($settings['strip_tags'])) . '" size="20">';
                             ?>
-                            <p class="description">Enter a comma-separated list of tags to remove from the generated posts, e.g.: <code>h1, img, p, div</code>.</p>
+                            <p class="description">Enter a comma-separated list of tags to remove from the generated posts, e.g.: <code>a, h1, img</code>.</p>
                         </td>
                     </tr>
 
@@ -4915,7 +4972,7 @@ class RSSRtvr_LITE_Syndicator {
                             <?php
                             echo '<input type="checkbox" name="convert_encoding" id="convert_encoding" ' . (($settings['convert_encoding'] === 'on') ? 'checked ' : '') . '>';
                             ?>
-                            <label for="convert_encoding">enables character encoding conversion. This option might be useful when parsing XML/RSS feeds in national charsets different than UTF-8.</label>
+                            <label for="convert_encoding">enables character encoding conversion. This option may be useful for parsing XML/RSS feeds in national character sets other than UTF-8.</label>
                         </td>
                     </tr>
 
@@ -5020,6 +5077,26 @@ class RSSRtvr_LITE_Syndicator {
                             </div>
                         </td>
                     </tr>
+
+                    <tr>
+                        <th scope="row"><?php $this->showChangeBox($change_selected, 'custom_fields'); ?>Custom fields</th>
+                        <td>
+                            <?php
+                            echo '<textarea cols="90" rows="10" id="custom_fields" name="custom_fields" style="margin:0;height:10em;width:100%;">' . stripslashes($settings['custom_fields']) . '</textarea>';
+                            ?>
+
+                            <p class="description">
+                                Assign XML tag values to the custom fields of the imported post. One rule per line
+                                <a href="https://www.rssretriever.com/documentation/#custom-fields" target="_blank">[?]</a>
+                            </p>
+
+                            <p class="description">
+                                Format: <code>xml_tag_name-&gt;custom_field_name</code><br>
+                                The tag name on the left must match the XML source. The field name on the right is a WordPress custom field (meta key).
+                            </p>
+                        </td>
+                    </tr>
+
                     <?php $this->showExpertBox($settings, true, $change_selected); ?>
             </div>
 
@@ -5180,7 +5257,7 @@ class RSSRtvr_LITE_Syndicator {
                     <?php
                     echo '<input type="text" style="width:100%" name="user_agent" value="' . esc_html(stripslashes($settings['user_agent'])) . '">';
                     ?>
-                    <p class="description">Use this field to set a fake <a href="https://en.wikipedia.org/wiki/User-Agent_header" target="_blank">user agent</a>.</p>
+                    <p class="description">Use this field to set a user agent [<a href="https://www.rssretriever.com/documentation/#user-agent" target="_blank">?</a>]</p>
                 </td>
             </tr>
 
@@ -5353,7 +5430,7 @@ class RSSRtvr_LITE_Syndicator {
             true
         );
 
-        wp_enqueue_code_editor(array('type' => 'text/html'));
+        wp_enqueue_code_editor(['type' => 'text/html']);
         wp_enqueue_script('wp-theme-plugin-editor');
         wp_enqueue_style('wp-codemirror');
         wp_enqueue_script('jquery-ui-sortable');
