@@ -1,9 +1,9 @@
 === RSS Retriever Lite ===
 Tags: rss, autoblogging, polylang, wpml, woocommerce
 Requires at least: 5.0
-Tested up to: 6.8
+Tested up to: 7.0
 Requires PHP: 7.4
-Stable tag: 1.1.1
+Stable tag: 1.2.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -163,6 +163,9 @@ language codes. These services are used only if the user configures an API key.
 - DeepL API: https://www.deepl.com/pro-license, https://www.deepl.com/privacy
 
 == Changelog ==
+
+= 1.2.0 =
+* Improved compatibility with social auto-posting. Featured images now attach correctly.
 
 = 1.1.1 =
 * Fixed warning

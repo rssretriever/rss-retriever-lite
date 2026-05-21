@@ -1,7 +1,7 @@
 <?php
 /*
 Plugin Name: RSS Retriever Lite
-Version: 1.1.1
+Version: 1.2.0
 Description: RSS Retriever Lite is a lightweight WordPress plugin for importing and managing RSS and Atom feeds. It supports Google and Yandex product feeds, YouTube and Vimeo video feeds, automatic updates, scheduling, filtering, translation, and integration with WooCommerce, Polylang and WPML.
 Author: RSS Retriever Team
 Plugin URI: https://www.rssretriever.com/
@@ -2268,7 +2268,7 @@ class RSSRtvr_LITE_Syndicator {
             '/%post_date\[(.*?)\]%/s',
             function ($matches) {
                 // phpcs:ignore WordPress.DateTime.RestrictedFunctions.date_date
-                return date(strval($matches[1]), strtotime($this->post['post_date']));
+                return trim(date(strval($matches[1]), strtotime($this->post['post_date'])));
             },
             $content
         );
@@ -3614,7 +3614,7 @@ class RSSRtvr_LITE_Syndicator {
         $this->post['post_modified']     = $this->post['post_date'];
         $this->post['post_date_gmt']     = addslashes(gmdate('Y-m-d H:i:s', $post_date));
         $this->post['post_modified_gmt'] = $this->post['post_date_gmt'];
-        $this->post['post_status']       = $this->current_feed['options']['post_status'];
+        $this->post['post_status']       = 'draft';
         $this->post['comment_status']    = $this->current_feed['options']['comment_status'];
         $this->post['ping_status']       = $this->current_feed['options']['ping_status'];
 
@@ -4226,6 +4226,16 @@ class RSSRtvr_LITE_Syndicator {
             return;
         }
 
+        if ($this->current_feed['options']['post_status'] !== 'draft') {
+            $this->post['ID'] = $post_id;
+            $this->post['post_status'] = $this->current_feed['options']['post_status'];
+            $this->post['edit_date'] = false;
+
+            rssrtvr_lite_disable_kses();
+            $upid = wp_insert_post($this->post);
+            rssrtvr_lite_enable_kses();
+        }
+
         ++$this->count;
         $this->log('New post title: ' . rssrtvr_lite_fix_white_spaces(trim(wp_strip_all_tags(stripslashes($this->post['post_title'])))));
         $this->log('New post ID: ' . esc_html($post_id) . PHP_EOL);
@@ -4767,7 +4777,6 @@ class RSSRtvr_LITE_Syndicator {
                             </select>
                             <p class="description">If enabled the RSS Retriever Lite syndicator inserts media attachments (if available) into the aggregating post. The
                                 following types of attachments are supported: <code>&lt;media:content&gt;</code>, <code>&lt;media:thumbnail&gt;</code> and <code>&lt;enclosure&gt;</code>.
-                                <br>All the aggregated images will contain <code>class="media_thumbnail"</code> in the <code>&lt;img&gt;</code> tag.
                             </p>
                         </td>
                     </tr>
@@ -4927,7 +4936,7 @@ class RSSRtvr_LITE_Syndicator {
                                 </ul>
                             </div>
                             <p class="description">
-                                <strong>Usage tips:</strong> Placeholders can be used in post title, slug, content, and excerpt templates. For indexed placeholders, use a number inside brackets (e.g. <code>%media_thumbnail[0]</code>). For custom date formats, use PHP date format strings (e.g. <code>%post_date[Y-m-d]</code>). For XML tags and attributes, use the tag name and attribute name (e.g. <code>%xml_tags[author]</code>, <code>%xml_tags_attr[media:content][url]</code>)
+                                <strong>Usage tips:</strong> Placeholders can be used in post title, slug, content, and excerpt templates. For indexed placeholders, use a number inside brackets (e.g. <code>%media_thumbnail[0]%</code>). For custom date formats, use PHP date format strings (e.g. <code>%post_date[Y-m-d]%</code>). For XML tags and attributes, use the tag name and attribute name (e.g. <code>%xml_tags[author]%</code>, <code>%xml_tags_attr[media:content][url]%</code>)
                                 [<a href="https://www.rssretriever.com/documentation/#templates" target="_blank">?</a>]
                             </p>
                         </td>
