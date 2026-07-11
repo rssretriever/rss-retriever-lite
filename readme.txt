@@ -1,9 +1,9 @@
 === RSS Retriever Lite ===
 Tags: rss, autoblogging, polylang, wpml, woocommerce
 Requires at least: 5.0
-Tested up to: 7.0
+Tested up to: 7.0.1
 Requires PHP: 7.4
-Stable tag: 1.2.0
+Stable tag: 1.2.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -14,6 +14,8 @@ Lightweight feed importer for WordPress with support for RSS, Atom, Google Produ
 RSS Retriever Lite is a feed importer for WordPress. It allows you to import and publish content from various feed sources directly into your site.
 
 **Features:**
+
+RSS Retriever Lite is a robust, lightweight feed importer for WordPress designed to handle everything from standard blogs to complex WooCommerce product feeds.
 
 - Full support for RSS and Atom feeds
 - YouTube video feeds (channels and playlists)
@@ -164,6 +166,9 @@ language codes. These services are used only if the user configures an API key.
 
 == Changelog ==
 
+= 1.2.1 =
+* Improved support for Atom feeds containing raw HTML content.
+
 = 1.2.0 =
 * Improved compatibility with social auto-posting. Featured images now attach correctly.
 
@@ -183,6 +188,12 @@ language codes. These services are used only if the user configures an API key.
 * Initial release
 
 == Upgrade Notice ==
+
+= 1.2.1 =
+* Improved support for Atom feeds containing raw HTML content.
+
+= 1.2.0 =
+* Improved compatibility with social auto-posting. Featured images now attach correctly.
 
 = 1.1.1 =
 * Fixed warning

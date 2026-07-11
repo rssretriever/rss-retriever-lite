@@ -1,7 +1,7 @@
 <?php
 /*
 Plugin Name: RSS Retriever Lite
-Version: 1.2.0
+Version: 1.2.1
 Description: RSS Retriever Lite is a lightweight WordPress plugin for importing and managing RSS and Atom feeds. It supports Google and Yandex product feeds, YouTube and Vimeo video feeds, automatic updates, scheduling, filtering, translation, and integration with WooCommerce, Polylang and WPML.
 Author: RSS Retriever Team
 Plugin URI: https://www.rssretriever.com/
@@ -11,40 +11,41 @@ License URI: https://www.gnu.org/licenses/gpl-2.0.html
 Text Domain: rss-retriever-lite
 */
 
-if (! defined('ABSPATH')) {
+if (!defined('ABSPATH')) {
     die('This file cannot be accessed directly.');
 }
 
-const RSSRTVR_LITE_CRON_MAGIC             = 'rssrtvr_cron_magic';
-const RSSRTVR_LITE_MAX_CURL_REDIRECTS     = 20;
+const RSSRTVR_LITE_CRON_MAGIC = 'rssrtvr_cron_magic';
+const RSSRTVR_LITE_MAX_CURL_REDIRECTS = 20;
 const RSSRTVR_LITE_POST_LIFE_CHECK_PERIOD = 3600;
-const RSSRTVR_LITE_MIN_UPDATE_TIME        = 1;
-const RSSRTVR_LITE_CURL_USER_AGENT        = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36';
-const RSSRTVR_LITE_CHECK_DATE             = 'rssrtvr_checkdate';
-const RSSRTVR_LITE_POST_LIFE_CHECK_DATE   = 'rssrtvr_post_life_check_date';
-const RSSRTVR_LITE_ACCOUNTS               = 'rssrtvr_accaunts';
-const RSSRTVR_LITE_FEED_OPTIONS           = 'rssrtvr_feed_options';
-const RSSRTVR_LITE_FEEDS_UPDATED          = 'rssrtvr_feeds_updated';
-const RSSRTVR_LITE_SYNDICATED_FEEDS       = 'rssrtvr_syndicated_feeds';
-const RSSRTVR_LITE_RSS_PULL_MODE          = 'rssrtvr_rss_pull_mode';
-const RSSRTVR_LITE_PC_INTERVAL            = 'rssrtvr_pseudo_cron_interval';
-const RSSRTVR_LITE_FEED_PULL_TIME         = 'rssrtvr_feed_pull_time';
-const RSSRTVR_LITE_MAX_EXEC_TIME          = 'rssrtvr_max_exec_time';
-const RSSRTVR_LITE_LOG                    = 'rssrtvr_parse_feed_log';
-const RSSRTVR_LITE_KEEP_IMAGES            = 'rssrtvr_keep_images';
-const RSSRTVR_LITE_PC_NAME                = 'rssrtvr_lite_custom_interval';
-const RSSRTVR_LITE_BLOCK_DIVIDER          = '825670622173';
+const RSSRTVR_LITE_MIN_UPDATE_TIME = 1;
+const RSSRTVR_LITE_CURL_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36';
+const RSSRTVR_LITE_CHECK_DATE = 'rssrtvr_checkdate';
+const RSSRTVR_LITE_POST_LIFE_CHECK_DATE = 'rssrtvr_post_life_check_date';
+const RSSRTVR_LITE_ACCOUNTS = 'rssrtvr_accaunts';
+const RSSRTVR_LITE_FEED_OPTIONS = 'rssrtvr_feed_options';
+const RSSRTVR_LITE_FEEDS_UPDATED = 'rssrtvr_feeds_updated';
+const RSSRTVR_LITE_SYNDICATED_FEEDS = 'rssrtvr_syndicated_feeds';
+const RSSRTVR_LITE_RSS_PULL_MODE = 'rssrtvr_rss_pull_mode';
+const RSSRTVR_LITE_PC_INTERVAL = 'rssrtvr_pseudo_cron_interval';
+const RSSRTVR_LITE_FEED_PULL_TIME = 'rssrtvr_feed_pull_time';
+const RSSRTVR_LITE_MAX_EXEC_TIME = 'rssrtvr_max_exec_time';
+const RSSRTVR_LITE_LOG = 'rssrtvr_parse_feed_log';
+const RSSRTVR_LITE_KEEP_IMAGES = 'rssrtvr_keep_images';
+const RSSRTVR_LITE_PC_NAME = 'rssrtvr_lite_custom_interval';
+const RSSRTVR_LITE_BLOCK_DIVIDER = '825670622173';
 
-function rssrtvr_lite_fixurl($url) {
+function rssrtvr_lite_fixurl($url)
+{
 
-    if (! is_object($url)) {
+    if (!is_object($url)) {
         $url = str_replace(' ', '+', trim($url));
-        if (! preg_match('!^https?://.+!i', $url)) {
+        if (!preg_match('!^https?://.+!i', $url)) {
             $url = 'https://' . $url;
         }
 
         $parsed_url = wp_parse_url($url);
-        if (isset($parsed_url['path']) && ! preg_match('/%[0-9A-Fa-f]{2}/', $parsed_url['path'])) {
+        if (isset($parsed_url['path']) && !preg_match('/%[0-9A-Fa-f]{2}/', $parsed_url['path'])) {
             $encoded_path = rawurlencode($parsed_url['path']);
             $encoded_path = str_replace(array('%2F', '%24', '%40', '%3A'), ['/', '$', '@', ':'], $encoded_path);
         } else {
@@ -53,10 +54,10 @@ function rssrtvr_lite_fixurl($url) {
 
         $url = $parsed_url['scheme'] . '://' . esc_attr($parsed_url['host']) . $encoded_path;
         if (isset($parsed_url['query'])) {
-            if (! preg_match('/%[0-9A-Fa-f]{2}/', $parsed_url['query'])) {
+            if (!preg_match('/%[0-9A-Fa-f]{2}/', $parsed_url['query'])) {
                 parse_str($parsed_url['query'], $query_array);
                 $encoded_query = http_build_query($query_array);
-                $url          .= '?' . $encoded_query;
+                $url .= '?' . $encoded_query;
             } else {
                 $url .= '?' . $parsed_url['query'];
             }
@@ -66,13 +67,14 @@ function rssrtvr_lite_fixurl($url) {
     return $url;
 }
 
-function rssrtvr_lite_html_cleanup($html) {
-    $pre_contents    = [];
+function rssrtvr_lite_html_cleanup($html)
+{
+    $pre_contents = [];
     $pre_placeholder = 'PRE_PLACEHOLDER_' . uniqid();
     preg_match_all('#<pre[^>]*>.*?</pre>#is', $html, $matches);
     foreach ($matches[0] as $index => $pre) {
         $pre_contents[$index] = $pre;
-        $html                   = str_replace($pre, $pre_placeholder . $index, $html);
+        $html = str_replace($pre, $pre_placeholder . $index, $html);
     }
 
     $decoded_html = html_entity_decode($html, ENT_QUOTES, 'UTF-8');
@@ -86,12 +88,14 @@ function rssrtvr_lite_html_cleanup($html) {
     return $decoded_html;
 }
 
-function rssrtvr_lite_remove_emojis($string) {
+function rssrtvr_lite_remove_emojis($string)
+{
     $emoji_pattern = '[\x{1F100}-\x{1F9FF}\x{2600}-\x{26FF}\x{2700}-\x{27BF}]|\xEF[\xB8-\xBB][\x80-\xBF]|[\xF0-\xF4][\x80-\xBF]{3}';
     return preg_replace("/$emoji_pattern/u", '', $string);
 }
 
-function rssrtvr_lite_file_get_contents($url, $as_array = false, $headers = false, $referrer = false, $ua = false) {
+function rssrtvr_lite_file_get_contents($url, $as_array = false, $headers = false, $referrer = false, $ua = false)
+{
     global $rssrtvr_lite;
 
     if (trim($url) === '') {
@@ -117,14 +121,14 @@ function rssrtvr_lite_file_get_contents($url, $as_array = false, $headers = fals
             }
         }
 
-        $headers       = trim($headers);
+        $headers = trim($headers);
         $headers_array = [];
 
         if (strlen($headers)) {
             foreach (explode("\n", $headers) as $line) {
                 $line = trim($line);
                 if (strpos($line, ':') !== false) {
-                    list($key, $value)             = explode(':', $line, 2);
+                    list($key, $value) = explode(':', $line, 2);
                     $headers_array[trim($key)] = trim($value);
                 }
             }
@@ -151,8 +155,8 @@ function rssrtvr_lite_file_get_contents($url, $as_array = false, $headers = fals
         $response = wp_remote_get(
             $url,
             [
-                'headers'     => $headers_array,
-                'timeout'     => 15,
+                'headers' => $headers_array,
+                'timeout' => 15,
                 'redirection' => RSSRTVR_LITE_MAX_CURL_REDIRECTS,
             ]
         );
@@ -176,14 +180,15 @@ function rssrtvr_lite_file_get_contents($url, $as_array = false, $headers = fals
         }
     }
 
-    if (! empty($content) && $as_array) {
+    if (!empty($content) && $as_array) {
         $content = explode("\n", trim($content));
     }
 
     return $content;
 }
 
-function rssrtvr_lite_get_header_field_value($header, $field) {
+function rssrtvr_lite_get_header_field_value($header, $field)
+{
     if (is_array($header)) {
         $end = count($header) - 1;
         if ($end) {
@@ -200,7 +205,8 @@ function rssrtvr_lite_get_header_field_value($header, $field) {
     return '';
 }
 
-function rssrtvr_lite_get_headers($url) {
+function rssrtvr_lite_get_headers($url)
+{
     global $rssrtvr;
 
     $ua = isset($rssrtvr->current_feed['options']['user_agent']) ? $rssrtvr->current_feed['options']['user_agent'] : '';
@@ -210,7 +216,7 @@ function rssrtvr_lite_get_headers($url) {
     }
 
     $args = [
-        'timeout'     => 10,
+        'timeout' => 10,
         'redirection' => defined('RSSRTVR_LITE_MAX_CURL_REDIRECTS') ? RSSRTVR_LITE_MAX_CURL_REDIRECTS : 5,
     ];
 
@@ -223,10 +229,10 @@ function rssrtvr_lite_get_headers($url) {
         return false;
     }
 
-    $code    = wp_remote_retrieve_response_code($response);
+    $code = wp_remote_retrieve_response_code($response);
     $message = wp_remote_retrieve_response_message($response);
-    $out     = [];
-    $out[]   = 'HTTP/1.1 ' . esc_html(intval($code)) . ' ' . (string) $message;
+    $out = [];
+    $out[] = 'HTTP/1.1 ' . esc_html(intval($code)) . ' ' . (string) $message;
 
     $headers = wp_remote_retrieve_headers($response);
     if (is_object($headers) && method_exists($headers, 'getAll')) {
@@ -244,15 +250,16 @@ function rssrtvr_lite_get_headers($url) {
     return $out;
 }
 
-function rssrtvr_lite_is_binary($url) {
+function rssrtvr_lite_is_binary($url)
+{
     $header = rssrtvr_lite_get_headers($url);
-    if (! is_array($header)) {
+    if (!is_array($header)) {
         return false;
     }
     if (isset($header[0]) && stripos($header[0], 'forbidden') !== false) {
         return false;
     }
-    $content_type   = rssrtvr_lite_get_header_field_value($header, 'content-type');
+    $content_type = rssrtvr_lite_get_header_field_value($header, 'content-type');
     $content_length = rssrtvr_lite_get_header_field_value($header, 'content-length');
     if (stripos($content_type, 'text') !== false || intval($content_length) === 0) {
         return false;
@@ -260,9 +267,10 @@ function rssrtvr_lite_is_binary($url) {
     return true;
 }
 
-function rssrtvr_lite_strip_specific_tags($html, $tagsToRemove) {
+function rssrtvr_lite_strip_specific_tags($html, $tagsToRemove)
+{
     if (strlen(trim($html))) {
-        if (! stripos($html, '<body>')) {
+        if (!stripos($html, '<body>')) {
             $html = '<body>' . $html . '</body>';
         }
         $dom = new DOMDocument();
@@ -295,9 +303,9 @@ function rssrtvr_lite_strip_specific_tags($html, $tagsToRemove) {
         ];
 
         foreach ($tagsToRemove as $tag) {
-            $tag      = strtolower(trim($tag));
+            $tag = strtolower(trim($tag));
             $elements = $dom->getElementsByTagName($tag);
-            for ($i = $elements->length; --$i >= 0;) {
+            for ($i = $elements->length; --$i >= 0; ) {
                 $element = $elements->item($i);
 
                 if (in_array($tag, $contentRemovingTags)) {
@@ -320,28 +328,30 @@ function rssrtvr_lite_strip_specific_tags($html, $tagsToRemove) {
     return $html;
 }
 
-function rssrtvr_lite_chop_str($str, $max_length = 0, $ending = '...') {
+function rssrtvr_lite_chop_str($str, $max_length = 0, $ending = '...')
+{
     $length = mb_strlen($str);
     if ($max_length > 1 && $length > $max_length) {
-        $ninety  = $max_length * 0.9;
+        $ninety = $max_length * 0.9;
         $length -= $ninety;
-        $first   = mb_substr($str, 0, -$length);
-        $last    = mb_substr($str, $ninety - $max_length);
-        $str     = $first . esc_html($ending) . $last;
+        $first = mb_substr($str, 0, -$length);
+        $last = mb_substr($str, $ninety - $max_length);
+        $str = $first . esc_html($ending) . $last;
     }
     return $str;
 }
 
-function rssrtvr_lite_shorten_html($text, $max_length = 0, $ending = '...', $exact = false) {
+function rssrtvr_lite_shorten_html($text, $max_length = 0, $ending = '...', $exact = false)
+{
     if ($max_length == 0 || mb_strlen(preg_replace('/<.*?>/', '', $text)) <= $max_length) {
         return $text;
     }
-    $total_length   = mb_strlen($ending);
-    $open_tags      = [];
+    $total_length = mb_strlen($ending);
+    $open_tags = [];
     $truncated_text = '';
     preg_match_all('/(<.+?>)?([^<>]*)/su', $text, $lines, PREG_SET_ORDER);
     foreach ($lines as $line_matchings) {
-        if (! empty($line_matchings[1])) {
+        if (!empty($line_matchings[1])) {
             if (preg_match('/^<(\s*.+?\/\s*|\s*(img|br|input|hr|area|base|basefont|col|frame|isindex|link|meta|param)(\s.+?)?)>$/isu', $line_matchings[1])) {
             } elseif (preg_match('/^<\s*\/([^\s]+?)\s*>$/su', $line_matchings[1], $tag_matchings)) {
                 $pos = array_search($tag_matchings[1], $open_tags);
@@ -355,7 +365,7 @@ function rssrtvr_lite_shorten_html($text, $max_length = 0, $ending = '...', $exa
         }
         $content_length = mb_strlen(preg_replace('/&[0-9a-z]{2,8};|&#[0-9]{1,7};|[0-9a-f]{1,6};/i', ' ', $line_matchings[2]));
         if ($total_length + $content_length > $max_length) {
-            $left            = $max_length - $total_length;
+            $left = $max_length - $total_length;
             $entities_length = 0;
             if (preg_match_all('/&[0-9a-z]{2,8};|&#[0-9]{1,7};|[0-9a-f]{1,6};/i', $line_matchings[2], $entities, PREG_OFFSET_CAPTURE)) {
                 foreach ($entities[0] as $entity) {
@@ -370,13 +380,13 @@ function rssrtvr_lite_shorten_html($text, $max_length = 0, $ending = '...', $exa
             break;
         } else {
             $truncated_text .= $line_matchings[2];
-            $total_length   += $content_length;
+            $total_length += $content_length;
         }
         if ($total_length >= $max_length) {
             break;
         }
     }
-    if (! $exact) {
+    if (!$exact) {
         $space_pos = mb_strrpos($truncated_text, ' ');
         if (isset($space_pos)) {
             $truncated_text = mb_substr($truncated_text, 0, $space_pos);
@@ -389,8 +399,9 @@ function rssrtvr_lite_shorten_html($text, $max_length = 0, $ending = '...', $exa
     return $truncated_text;
 }
 
-function rssrtvr_lite_strip_tags($text) {
-    if (is_null($text) || ! is_scalar($text)) {
+function rssrtvr_lite_strip_tags($text)
+{
+    if (is_null($text) || !is_scalar($text)) {
         return '';
     }
     // phpcs:ignore WordPress.WP.AlternativeFunctions.strip_tags_strip_tags
@@ -403,20 +414,23 @@ function rssrtvr_lite_strip_tags($text) {
     ));
 }
 
-function rssrtvr_lite_REQUEST_URI() {
+function rssrtvr_lite_REQUEST_URI()
+{
     if (isset($_SERVER['REQUEST_URI'])) {
         return esc_url_raw(wp_unslash($_SERVER['REQUEST_URI']));
     }
     return '';
 }
 
-function rssrtvr_lite_fix_white_spaces($str) {
+function rssrtvr_lite_fix_white_spaces($str)
+{
     return preg_replace('/\s\s+/', ' ', preg_replace('/\s\"/', ' "', preg_replace('/\s\'/', ' \'', $str)));
 }
 
-function rssrtvr_lite_delete_media_by_url($media_urls) {
+function rssrtvr_lite_delete_media_by_url($media_urls)
+{
     $wp_upload_dir = wp_upload_dir();
-    if (! is_array($media_urls)) {
+    if (!is_array($media_urls)) {
         $media_urls = [$media_urls];
     }
     if (count($media_urls)) {
@@ -438,7 +452,8 @@ function rssrtvr_lite_delete_media_by_url($media_urls) {
     }
 }
 
-function rssrtvr_lite_post_exists($post, $method = '') {
+function rssrtvr_lite_post_exists($post, $method = '')
+{
     global $wpdb, $rssrtvr_lite;
 
     if ($method === '') {
@@ -447,7 +462,7 @@ function rssrtvr_lite_post_exists($post, $method = '') {
 
     $rssrtvr_lite->log('Duplicate check by ' . str_replace('_', ' ', str_replace('guid', 'link', $method)));
 
-    $name          = trim(sanitize_title(rssrtvr_lite_fix_white_spaces($post['post_title'])));
+    $name = trim(sanitize_title(rssrtvr_lite_fix_white_spaces($post['post_title'])));
     $no_emoji_name = rssrtvr_lite_remove_emojis($name);
 
     if (strlen(($post['link']))) {
@@ -569,7 +584,8 @@ function rssrtvr_lite_post_exists($post, $method = '') {
     return false;
 }
 
-function rssrtvr_lite_attach_post_thumbnail($post_id, $image_url, $title) {
+function rssrtvr_lite_attach_post_thumbnail($post_id, $image_url, $title)
+{
     $attach_id = rssrtvr_lite_add_image_to_library($image_url, $title, $post_id);
     if ($attach_id !== false) {
         if (set_post_thumbnail($post_id, $attach_id)) {
@@ -579,18 +595,19 @@ function rssrtvr_lite_attach_post_thumbnail($post_id, $image_url, $title) {
     return false;
 }
 
-function rssrtvr_lite_default_options() {
+function rssrtvr_lite_default_options()
+{
     $defaults = [
-        RSSRTVR_LITE_ACCOUNTS             => [],
-        RSSRTVR_LITE_CHECK_DATE           => 0,
+        RSSRTVR_LITE_ACCOUNTS => [],
+        RSSRTVR_LITE_CHECK_DATE => 0,
         RSSRTVR_LITE_POST_LIFE_CHECK_DATE => 0,
-        RSSRTVR_LITE_MAX_EXEC_TIME        => 60,
-        RSSRTVR_LITE_SYNDICATED_FEEDS     => [],
-        RSSRTVR_LITE_FEEDS_UPDATED        => [],
-        RSSRTVR_LITE_RSS_PULL_MODE        => 'auto',
-        RSSRTVR_LITE_PC_INTERVAL          => 2 * RSSRTVR_LITE_MIN_UPDATE_TIME,
-        RSSRTVR_LITE_FEED_PULL_TIME       => 0,
-        RSSRTVR_LITE_KEEP_IMAGES          => 'on',
+        RSSRTVR_LITE_MAX_EXEC_TIME => 60,
+        RSSRTVR_LITE_SYNDICATED_FEEDS => [],
+        RSSRTVR_LITE_FEEDS_UPDATED => [],
+        RSSRTVR_LITE_RSS_PULL_MODE => 'auto',
+        RSSRTVR_LITE_PC_INTERVAL => 2 * RSSRTVR_LITE_MIN_UPDATE_TIME,
+        RSSRTVR_LITE_FEED_PULL_TIME => 0,
+        RSSRTVR_LITE_KEEP_IMAGES => 'on',
     ];
 
     foreach ($defaults as $name => $val) {
@@ -602,7 +619,7 @@ function rssrtvr_lite_default_options() {
     $options = get_option(RSSRTVR_LITE_ACCOUNTS);
 
     $services = [
-        'deepl'  => ['api_key'],
+        'deepl' => ['api_key'],
         'yandex' => ['api_key'],
         'google' => ['api_key'],
     ];
@@ -610,28 +627,29 @@ function rssrtvr_lite_default_options() {
     foreach ($services as $service => $keys) {
         foreach ($keys as $key) {
             $option_key = "{$service}_{$key}";
-            if (! isset($options[$option_key])) {
+            if (!isset($options[$option_key])) {
                 $options[$option_key] = '';
             }
         }
 
-        $api_limit_key             = "{$service}_api_limit";
+        $api_limit_key = "{$service}_api_limit";
         $options[$api_limit_key] = [
-            'epoch'        => $options[$api_limit_key]['epoch'] ?? 0,
+            'epoch' => $options[$api_limit_key]['epoch'] ?? 0,
             'max_requests' => $options[$api_limit_key]['max_requests'] ?? 0,
-            'count'        => $options[$api_limit_key]['count'] ?? 0,
-            'period'       => $options[$api_limit_key]['period'] ?? 3600,
+            'count' => $options[$api_limit_key]['count'] ?? 0,
+            'period' => $options[$api_limit_key]['period'] ?? 3600,
         ];
     }
 
-    if (! get_option(RSSRTVR_LITE_CRON_MAGIC)) {
+    if (!get_option(RSSRTVR_LITE_CRON_MAGIC)) {
         update_option(RSSRTVR_LITE_CRON_MAGIC, md5(time()));
     }
 
     update_option(RSSRTVR_LITE_ACCOUNTS, $options);
 }
 
-function rssrtvr_lite_yandex_translate($apikey, $text, $dir, $return_empty = false) {
+function rssrtvr_lite_yandex_translate($apikey, $text, $dir, $return_empty = false)
+{
     global $rssrtvr_lite;
 
     if ($rssrtvr_lite->api_overlimit('yandex_api_limit')) {
@@ -646,11 +664,11 @@ function rssrtvr_lite_yandex_translate($apikey, $text, $dir, $return_empty = fal
             'https://translate.yandex.net/api/v1.5/tr.json/translate',
             [
                 'timeout' => 15,
-                'body'    => [
-                    'key'    => trim($apikey),
-                    'lang'   => $dir,
+                'body' => [
+                    'key' => trim($apikey),
+                    'lang' => $dir,
                     'format' => 'html',
-                    'text'   => $text,
+                    'text' => $text,
                 ],
             ]
         );
@@ -667,7 +685,7 @@ function rssrtvr_lite_yandex_translate($apikey, $text, $dir, $return_empty = fal
         list($sl, $tr) = explode('-', $dir);
 
         $postData = [
-            'texts'              => [$text],
+            'texts' => [$text],
             'sourceLanguageCode' => $sl,
             'targetLanguageCode' => $tr,
         ];
@@ -678,9 +696,9 @@ function rssrtvr_lite_yandex_translate($apikey, $text, $dir, $return_empty = fal
                 'timeout' => 15,
                 'headers' => [
                     'Authorization' => 'Api-Key ' . $apikey,
-                    'Content-Type'  => 'application/json',
+                    'Content-Type' => 'application/json',
                 ],
-                'body'    => wp_json_encode($postData),
+                'body' => wp_json_encode($postData),
             ]
         );
 
@@ -692,7 +710,7 @@ function rssrtvr_lite_yandex_translate($apikey, $text, $dir, $return_empty = fal
         $json = json_decode(wp_remote_retrieve_body($response), true);
     }
 
-    if (! isset($json['code']) && isset($json['translations'][0]['text'])) {
+    if (!isset($json['code']) && isset($json['translations'][0]['text'])) {
         $rssrtvr_lite->log('Done');
         return $json['translations'][0]['text'];
     } elseif (isset($json['code']) && (int) $json['code'] === 200 && isset($json['text'][0])) {
@@ -704,7 +722,8 @@ function rssrtvr_lite_yandex_translate($apikey, $text, $dir, $return_empty = fal
     }
 }
 
-function rssrtvr_lite_google_translate($apikey, $text, $source, $target, $return_empty = false) {
+function rssrtvr_lite_google_translate($apikey, $text, $source, $target, $return_empty = false)
+{
     global $rssrtvr_lite;
 
     if ($rssrtvr_lite->api_overlimit('google_api_limit')) {
@@ -718,11 +737,11 @@ function rssrtvr_lite_google_translate($apikey, $text, $source, $target, $return
         'https://translation.googleapis.com/language/translate/v2',
         [
             'timeout' => 15,
-            'body'    => [
-                'key'    => trim($apikey),
+            'body' => [
+                'key' => trim($apikey),
                 'source' => $source,
                 'target' => $target,
-                'q'      => $text,
+                'q' => $text,
             ],
         ]
     );
@@ -751,7 +770,8 @@ function rssrtvr_lite_google_translate($apikey, $text, $source, $target, $return
     }
 }
 
-function rssrtvr_lite_deepl_translate($apikey, $text, $target, $use_api_free = false, $return_empty = false) {
+function rssrtvr_lite_deepl_translate($apikey, $text, $target, $use_api_free = false, $return_empty = false)
+{
     global $rssrtvr_lite;
 
     if ($rssrtvr_lite->api_overlimit('deepl_api_limit')) {
@@ -767,11 +787,11 @@ function rssrtvr_lite_deepl_translate($apikey, $text, $target, $use_api_free = f
         $url,
         [
             'timeout' => 15,
-            'body'    => [
+            'body' => [
                 'preserve_formatting' => 1,
-                'auth_key'            => trim($apikey),
-                'target_lang'         => $target,
-                'text'                => $text,
+                'auth_key' => trim($apikey),
+                'target_lang' => $target,
+                'text' => $text,
             ],
         ]
     );
@@ -792,7 +812,8 @@ function rssrtvr_lite_deepl_translate($apikey, $text, $target, $use_api_free = f
     }
 }
 
-function rssrtvr_lite_compare_files($file_name_1, $file_name_2) {
+function rssrtvr_lite_compare_files($file_name_1, $file_name_2)
+{
     $file1 = rssrtvr_lite_file_get_contents($file_name_1);
     $file2 = rssrtvr_lite_file_get_contents($file_name_2);
     if ($file1 && $file2) {
@@ -801,17 +822,18 @@ function rssrtvr_lite_compare_files($file_name_1, $file_name_2) {
     return false;
 }
 
-function rssrtvr_lite_save_image($image_url, $preferred_name = '', $width = -1, $height = -1, $compression = -1, $output_image_type = null) {
+function rssrtvr_lite_save_image($image_url, $preferred_name = '', $width = -1, $height = -1, $compression = -1, $output_image_type = null)
+{
     global $rssrtvr_lite;
 
     $wp_upload_dir = wp_upload_dir();
-    $temp_name     = wp_unique_filename($wp_upload_dir['path'], md5(time()) . '.tmp');
-    $image_url     = trim($image_url);
+    $temp_name = wp_unique_filename($wp_upload_dir['path'], md5(time()) . '.tmp');
+    $image_url = trim($image_url);
 
     if (str_starts_with($image_url, '//')) {
         $image_url = 'http:' . $image_url;
     } elseif (str_starts_with($image_url, '/') && isset($rssrtvr_lite->post['link'])) {
-        $parse     = wp_parse_url($rssrtvr_lite->post['link']);
+        $parse = wp_parse_url($rssrtvr_lite->post['link']);
         $image_url = $parse['scheme'] . '://' . esc_attr($parse['host']) . $image_url;
     }
 
@@ -820,12 +842,12 @@ function rssrtvr_lite_save_image($image_url, $preferred_name = '', $width = -1, 
         return $image_url;
     }
 
-    if (! function_exists('gd_info')) {
+    if (!function_exists('gd_info')) {
         $rssrtvr_lite->log('GD library is missing. The image will be hotlinked');
         return $image_url;
     }
 
-    if (! isset($image_file) || $image_file === false) {
+    if (!isset($image_file) || $image_file === false) {
         $image_file = rssrtvr_lite_file_get_contents($image_url);
         if ($image_file === false) {
             $image_file = rssrtvr_lite_file_get_contents($image_url, false, false, false, RSSRTVR_LITE_CURL_USER_AGENT);
@@ -868,7 +890,7 @@ function rssrtvr_lite_save_image($image_url, $preferred_name = '', $width = -1, 
         if ($output_image_type != null) {
             $ext = str_ireplace('tiff', 'tif', str_replace('jpeg', 'jpg', image_type_to_extension($output_image_type, true)));
         } else {
-            $ext               = str_ireplace('tiff', 'tif', str_replace('jpeg', 'jpg', image_type_to_extension($image_type, true)));
+            $ext = str_ireplace('tiff', 'tif', str_replace('jpeg', 'jpg', image_type_to_extension($image_type, true)));
             $output_image_type = $image_type;
         }
 
@@ -888,7 +910,7 @@ function rssrtvr_lite_save_image($image_url, $preferred_name = '', $width = -1, 
         $do_transform_image = ($width != -1 || $height != -1 || $compression != -1 || $output_image_type != $image_type);
 
         if (file_exists($wp_upload_dir['path'] . '/' . $file_name)) {
-            if (! $do_transform_image && rssrtvr_lite_compare_files($wp_upload_dir['path'] . '/' . $temp_name, $wp_upload_dir['path'] . '/' . $file_name)) {
+            if (!$do_transform_image && rssrtvr_lite_compare_files($wp_upload_dir['path'] . '/' . $temp_name, $wp_upload_dir['path'] . '/' . $file_name)) {
                 imagedestroy($image);
                 wp_delete_file($wp_upload_dir['path'] . '/' . $temp_name);
                 return $wp_upload_dir['url'] . '/' . $file_name;
@@ -896,11 +918,11 @@ function rssrtvr_lite_save_image($image_url, $preferred_name = '', $width = -1, 
             $file_name = wp_unique_filename($wp_upload_dir['path'], $file_name);
         }
 
-        $image_path      = $wp_upload_dir['path'] . '/' . $file_name;
+        $image_path = $wp_upload_dir['path'] . '/' . $file_name;
         $local_image_url = $wp_upload_dir['url'] . '/' . $file_name;
 
         if ($do_transform_image) {
-            $img_width  = imagesx($image);
+            $img_width = imagesx($image);
             $img_height = imagesy($image);
 
             if (preg_match('/%$/', $width)) {
@@ -911,7 +933,7 @@ function rssrtvr_lite_save_image($image_url, $preferred_name = '', $width = -1, 
             }
 
             if ($width == -1 && $height == -1) {
-                $width  = $img_width;
+                $width = $img_width;
                 $height = $img_height;
             } elseif ($width == -1) {
                 $width = (int) round($img_width * ($height / $img_height));
@@ -986,7 +1008,8 @@ function rssrtvr_lite_save_image($image_url, $preferred_name = '', $width = -1, 
     return $image_url;
 }
 
-function rssrtvr_lite_disable_kses() {
+function rssrtvr_lite_disable_kses()
+{
     global $rssrtvr_lite;
     if (($rssrtvr_lite->current_feed['options']['sanitize'] ?? '') !== 'on') {
         remove_filter('content_save_pre', 'wp_filter_post_kses');
@@ -995,7 +1018,8 @@ function rssrtvr_lite_disable_kses() {
     }
 }
 
-function rssrtvr_lite_enable_kses() {
+function rssrtvr_lite_enable_kses()
+{
     global $rssrtvr_lite;
     if (($rssrtvr_lite->current_feed['options']['sanitize'] ?? '') !== 'on') {
         add_filter('content_save_pre', 'wp_filter_post_kses');
@@ -1004,46 +1028,47 @@ function rssrtvr_lite_enable_kses() {
     }
 }
 
-function rssrtvr_lite_add_image_to_library($image_url, $title = '', $post_id = false) {
-    if (! is_string($image_url)) {
+function rssrtvr_lite_add_image_to_library($image_url, $title = '', $post_id = false)
+{
+    if (!is_string($image_url)) {
         return false;
     }
     $title = trim($title);
     if ($post_id == false) {
         global $rssrtvr_lite_images_to_attach;
         $rssrtvr_lite_images_to_attach[] = [
-            'url'   => $image_url,
+            'url' => $image_url,
             'title' => $title,
         ];
     } else {
         $upload_dir = wp_upload_dir();
-        if (! file_exists($upload_dir['path'] . '/' . basename($image_url))) {
+        if (!file_exists($upload_dir['path'] . '/' . basename($image_url))) {
             $image_url = rssrtvr_lite_save_image($image_url, $title);
         }
         $img_path = str_replace($upload_dir['url'], $upload_dir['path'], $image_url);
         if (file_exists($img_path) && filesize($img_path)) {
             $wp_filetype = wp_check_filetype($upload_dir['path'] . basename($image_url), null);
-            $attachment  = [
+            $attachment = [
                 'post_mime_type' => $wp_filetype['type'],
-                'post_title'     => preg_replace('/\.[^.]+$/', '', $title),
-                'post_content'   => '',
-                'post_parent'    => $post_id,
-                'post_status'    => 'inherit',
+                'post_title' => preg_replace('/\.[^.]+$/', '', $title),
+                'post_content' => '',
+                'post_parent' => $post_id,
+                'post_status' => 'inherit',
             ];
-            $attach_id   = wp_insert_attachment($attachment, $upload_dir['path'] . '/' . basename($image_url), $post_id);
+            $attach_id = wp_insert_attachment($attachment, $upload_dir['path'] . '/' . basename($image_url), $post_id);
             rssrtvr_lite_disable_kses();
             wp_update_post(
                 [
-                    'ID'          => $attach_id,
+                    'ID' => $attach_id,
                     'post_parent' => $post_id,
                 ]
             );
             update_post_meta($attach_id, '_wp_attachment_image_alt', $title);
             rssrtvr_lite_enable_kses();
-            if (! function_exists('wp_generate_attachment_metadata')) {
+            if (!function_exists('wp_generate_attachment_metadata')) {
                 require_once ABSPATH . 'wp-admin/includes/image.php';
             }
-            if (! function_exists('media_handle_upload')) {
+            if (!function_exists('media_handle_upload')) {
                 require_once ABSPATH . 'wp-admin/includes/media.php';
             }
             $attach_data = wp_generate_attachment_metadata($attach_id, $upload_dir['path'] . '/' . basename($image_url));
@@ -1053,12 +1078,13 @@ function rssrtvr_lite_add_image_to_library($image_url, $title = '', $post_id = f
     }
     return false;
 }
-function rssrtvr_lite_unzip($content) {
+function rssrtvr_lite_unzip($content)
+{
     $wp_upload_dir = wp_upload_dir();
     // phpcs:ignore WordPress.DateTime.RestrictedFunctions.date_date
-    $tempfile      = $wp_upload_dir['path'] . '/' . esc_html(wp_unique_filename($wp_upload_dir['path'], 'zip-' . date('Y-m-d-H-i')) . '.tmp');
-    $success       = file_put_contents($tempfile, $content, LOCK_EX);
-    if (! $success) {
+    $tempfile = $wp_upload_dir['path'] . '/' . esc_html(wp_unique_filename($wp_upload_dir['path'], 'zip-' . date('Y-m-d-H-i')) . '.tmp');
+    $success = file_put_contents($tempfile, $content, LOCK_EX);
+    if (!$success) {
         return $content;
     }
 
@@ -1078,7 +1104,8 @@ function rssrtvr_lite_unzip($content) {
     return $result;
 }
 
-function rssrtvr_lite_pack_conetnt($post, $extended = false) {
+function rssrtvr_lite_pack_conetnt($post, $extended = false)
+{
     $packed_content = trim($post['post_title']) . "\n\n" . RSSRTVR_LITE_BLOCK_DIVIDER . "\n\n" . trim($post['post_content']) . "\n\n" . RSSRTVR_LITE_BLOCK_DIVIDER;
 
     if ($extended) {
@@ -1087,7 +1114,8 @@ function rssrtvr_lite_pack_conetnt($post, $extended = false) {
     return $packed_content;
 }
 
-function rssrtvr_lite_unpack_content($post, $packed_content) {
+function rssrtvr_lite_unpack_content($post, $packed_content)
+{
     $parts = explode(RSSRTVR_LITE_BLOCK_DIVIDER, $packed_content);
 
     if ('' !== trim($parts[0] ?? '')) {
@@ -1112,15 +1140,16 @@ function rssrtvr_lite_unpack_content($post, $packed_content) {
     return $post;
 }
 
-function rssrtvr_lite_shorten_string_by_words($string, $numWords) {
+function rssrtvr_lite_shorten_string_by_words($string, $numWords)
+{
     $parts = preg_split('/(\s+)/', $string, -1, PREG_SPLIT_DELIM_CAPTURE);
 
-    $words           = 0;
+    $words = 0;
     $shortenedString = '';
 
     foreach ($parts as $index => $part) {
         $shortenedString .= $part;
-        if (! ctype_space($part) && $index % 2 == 0) {
+        if (!ctype_space($part) && $index % 2 == 0) {
             ++$words;
         }
 
@@ -1140,7 +1169,8 @@ function rssrtvr_lite_shorten_string_by_words($string, $numWords) {
     return $shortenedString;
 }
 
-function rssrtvr_lite_get_youtube_video($keyword) {
+function rssrtvr_lite_get_youtube_video($keyword)
+{
     global $rssrtvr_lite;
     $rssrtvr_lite->log('Search YouTube for "' . $keyword . '"');
     $res = rssrtvr_lite_file_get_contents('https://www.youtube.com/results?search_query=' . urlencode($keyword) . '&sp=EgIYAw%253D%253D', false, '', 'self', RSSRTVR_LITE_CURL_USER_AGENT);
@@ -1158,7 +1188,8 @@ function rssrtvr_lite_get_youtube_video($keyword) {
     return '';
 }
 
-function rssrtvr_lite_options_menu() {
+function rssrtvr_lite_options_menu()
+{
     if (isset($_POST['submit_options']) && check_admin_referer('rssrtvr_lite_general_settings')) {
         update_option(RSSRTVR_LITE_MAX_EXEC_TIME, abs(intval($_POST[RSSRTVR_LITE_MAX_EXEC_TIME])));
 
@@ -1179,7 +1210,7 @@ function rssrtvr_lite_options_menu() {
         update_option(RSSRTVR_LITE_KEEP_IMAGES, isset($_POST[RSSRTVR_LITE_KEEP_IMAGES]) ? 'on' : '');
         echo '<div id="message" class="notice updated"><p><strong>Settings saved.</strong></p></div>';
     }
-?>
+    ?>
     <div class="wrap">
         <h2><?php esc_html_e('Settings', 'rss-retriever-lite'); ?></h2>
         <div class="metabox-holder postbox-container">
@@ -1189,9 +1220,7 @@ function rssrtvr_lite_options_menu() {
                         <tr>
                             <th scope="row">RSS pull mode</th>
                             <td>
-                                <select
-                                    id="rssrtvr-pull-mode"
-                                    class="rssrtvr-lite-pull-mode"
+                                <select id="rssrtvr-pull-mode" class="rssrtvr-lite-pull-mode"
                                     name="<?php echo esc_attr(RSSRTVR_LITE_RSS_PULL_MODE); ?>">
                                     <?php
                                     echo '<option ' . ((get_option(RSSRTVR_LITE_RSS_PULL_MODE) === 'auto') ? 'selected ' : '') . 'value="auto">Auto</option>';
@@ -1199,14 +1228,17 @@ function rssrtvr_lite_options_menu() {
                                     ?>
                                 </select>
                                 <p id="auto" class="description" style="display:none;">
-                                    In this mode, the RSS Retriever Lite plugin uses WordPress pseudo cron, which will be executed by the WordPress every
-                                    <input type="number" min="<?php echo esc_attr(RSSRTVR_LITE_MIN_UPDATE_TIME); ?>" size="4"
-                                        name="<?php echo esc_attr(RSSRTVR_LITE_PC_INTERVAL); ?>"
+                                    In this mode, the RSS Retriever Lite plugin uses WordPress pseudo cron, which will be
+                                    executed by the WordPress every
+                                    <input type="number" min="<?php echo esc_attr(RSSRTVR_LITE_MIN_UPDATE_TIME); ?>"
+                                        size="4" name="<?php echo esc_attr(RSSRTVR_LITE_PC_INTERVAL); ?>"
                                         value="<?php echo esc_attr(get_option(RSSRTVR_LITE_PC_INTERVAL)); ?>"> minutes.<br>
-                                    The pseudo cron will trigger when someone visits your WordPress site, if the scheduled time has passed.
+                                    The pseudo cron will trigger when someone visits your WordPress site, if the scheduled
+                                    time has passed.
                                 </p>
                                 <p id="cron" class="description" style="display:none;">
-                                    In this mode, you need to manually configure cron at your host. For example, if you want to run a cron job once a hour, just add the following line into your crontab:<br>
+                                    In this mode, you need to manually configure cron at your host. For example, if you want
+                                    to run a cron job once a hour, just add the following line into your crontab:<br>
                                     <code><?php echo esc_html('0 * * * * /usr/bin/curl --silent ' . esc_html(get_option('siteurl')) . '/?pull-feeds=' . esc_attr(get_option(RSSRTVR_LITE_CRON_MAGIC))); ?></code>
                                     <?php
                                     if (defined('WP_CACHE') && WP_CACHE) {
@@ -1219,8 +1251,10 @@ function rssrtvr_lite_options_menu() {
                         <tr>
                             <th scope="row">Max execution time</th>
                             <td>
-                                <input type="number" min="0" name="<?php echo esc_attr(RSSRTVR_LITE_MAX_EXEC_TIME); ?>" size="5" value="<?php echo esc_attr(get_option(RSSRTVR_LITE_MAX_EXEC_TIME)); ?>">
-                                <p class="description">Maximum PHP execution time, given to RSS Retriever Lite to execute all operations. If set to zero, no time limit is imposed.</p>
+                                <input type="number" min="0" name="<?php echo esc_attr(RSSRTVR_LITE_MAX_EXEC_TIME); ?>"
+                                    size="5" value="<?php echo esc_attr(get_option(RSSRTVR_LITE_MAX_EXEC_TIME)); ?>">
+                                <p class="description">Maximum PHP execution time, given to RSS Retriever Lite to execute
+                                    all operations. If set to zero, no time limit is imposed.</p>
                             </td>
                         </tr>
                     </table>
@@ -1234,15 +1268,16 @@ function rssrtvr_lite_options_menu() {
             </form>
         </div>
     </div>
-<?php
+    <?php
 }
 
-function rssrtvr_lite_period_select($p, $n) {
+function rssrtvr_lite_period_select($p, $n)
+{
     echo '<select name="' . esc_html(esc_attr($n)) . '" style="vertical-align: top;">';
     foreach (
         [
-            '3600'    => 'a hour',
-            '86400'   => 'a day',
+            '3600' => 'a hour',
+            '86400' => 'a day',
             '2678400' => 'a month',
         ] as $v => $o
     ) {
@@ -1251,7 +1286,8 @@ function rssrtvr_lite_period_select($p, $n) {
     echo '</select>';
 }
 
-function rssrtvr_lite_accounts_menu() {
+function rssrtvr_lite_accounts_menu()
+{
     $accounts = get_option(RSSRTVR_LITE_ACCOUNTS);
 
     if (isset($_POST['modify_accounts']) && check_admin_referer('rssrtvr_lite_accounts')) {
@@ -1268,16 +1304,16 @@ function rssrtvr_lite_accounts_menu() {
             }
         }
 
-        $accounts['deepl_api_limit']['max_requests']  = abs(intval($_POST['deepl_api_limit'] ?? $accounts['deepl_api_limit']['max_requests']));
+        $accounts['deepl_api_limit']['max_requests'] = abs(intval($_POST['deepl_api_limit'] ?? $accounts['deepl_api_limit']['max_requests']));
         $accounts['google_api_limit']['max_requests'] = abs(intval($_POST['google_api_limit'] ?? $accounts['google_api_limit']['max_requests']));
         $accounts['yandex_api_limit']['max_requests'] = abs(intval($_POST['yandex_api_limit'] ?? $accounts['yandex_api_limit']['max_requests']));
-        $accounts['deepl_api_limit']['period']        = intval($_POST['deepl_api_limit_period'] ?? $accounts['deepl_api_limit']['period']);
-        $accounts['google_api_limit']['period']       = intval($_POST['google_api_limit_period'] ?? $accounts['google_api_limit']['period']);
-        $accounts['yandex_api_limit']['period']       = intval($_POST['yandex_api_limit_period'] ?? $accounts['yandex_api_limit']['period']);
+        $accounts['deepl_api_limit']['period'] = intval($_POST['deepl_api_limit_period'] ?? $accounts['deepl_api_limit']['period']);
+        $accounts['google_api_limit']['period'] = intval($_POST['google_api_limit_period'] ?? $accounts['google_api_limit']['period']);
+        $accounts['yandex_api_limit']['period'] = intval($_POST['yandex_api_limit_period'] ?? $accounts['yandex_api_limit']['period']);
 
         update_option(RSSRTVR_LITE_ACCOUNTS, $accounts);
     }
-?>
+    ?>
     <div class="wrap">
         <h2><?php esc_html_e('Accounts', 'rss-retriever-lite'); ?></h2>
         <br>
@@ -1292,19 +1328,25 @@ function rssrtvr_lite_accounts_menu() {
                                 <tr>
                                     <th>DeepL API key</th>
                                     <td>
-                                        <input type="text" style="width: 100%;" name="deepl_api_key" size="80" value="<?php echo esc_attr(esc_attr(stripslashes($accounts['deepl_api_key']))); ?>">
-                                        <p class="description">Enter your API key above in order to use DeepL Translator. If you don't have one, get it <a href="https://www.deepl.com/pro.html" target="_blank">here</a>.</p>
+                                        <input type="text" style="width: 100%;" name="deepl_api_key" size="80"
+                                            value="<?php echo esc_attr(esc_attr(stripslashes($accounts['deepl_api_key']))); ?>">
+                                        <p class="description">Enter your API key above in order to use DeepL Translator. If
+                                            you don't have one, get it <a href="https://www.deepl.com/pro.html"
+                                                target="_blank">here</a>.</p>
                                     </td>
                                 </tr>
 
                                 <tr>
                                     <th>DeepL request limit</th>
                                     <td>
-                                        <input type="number" min="0" name="deepl_api_limit" size="6" value="<?php echo esc_attr(esc_attr(stripslashes($accounts['deepl_api_limit']['max_requests']))); ?>">
+                                        <input type="number" min="0" name="deepl_api_limit" size="6"
+                                            value="<?php echo esc_attr(esc_attr(stripslashes($accounts['deepl_api_limit']['max_requests']))); ?>">
                                         <?php
                                         rssrtvr_lite_period_select($accounts['deepl_api_limit']['period'], 'deepl_api_limit_period');
                                         ?>
-                                        <p class="description">Set the limit for DeepL API requests. A value of <code>0</code> is interpreted as no limit.</p>
+                                        <p class="description">Set the limit for DeepL API requests. A value of
+                                            <code>0</code> is interpreted as no limit.
+                                        </p>
                                     </td>
                                 </tr>
 
@@ -1319,19 +1361,26 @@ function rssrtvr_lite_accounts_menu() {
                                 <tr>
                                     <th>Google Translate API key</th>
                                     <td>
-                                        <input type="text" style="width: 100%;" name="google_api_key" size="80" value="<?php echo esc_attr(stripslashes($accounts['google_api_key'])); ?>">
-                                        <p class="description">Enter your API key above in order to use Google Translate. If you don't have one, get it <a href="https://cloud.google.com/translate/docs/getting-started" target="_blank">here</a>.</p>
+                                        <input type="text" style="width: 100%;" name="google_api_key" size="80"
+                                            value="<?php echo esc_attr(stripslashes($accounts['google_api_key'])); ?>">
+                                        <p class="description">Enter your API key above in order to use Google Translate. If
+                                            you don't have one, get it <a
+                                                href="https://cloud.google.com/translate/docs/getting-started"
+                                                target="_blank">here</a>.</p>
                                     </td>
                                 </tr>
 
                                 <tr>
                                     <th>Google Translate request limit</th>
                                     <td>
-                                        <input type="number" min="0" name="google_api_limit" size="6" value="<?php echo esc_attr(stripslashes($accounts['google_api_limit']['max_requests'])); ?>">
+                                        <input type="number" min="0" name="google_api_limit" size="6"
+                                            value="<?php echo esc_attr(stripslashes($accounts['google_api_limit']['max_requests'])); ?>">
                                         <?php
                                         rssrtvr_lite_period_select($accounts['google_api_limit']['period'], 'google_api_limit_period');
                                         ?>
-                                        <p class="description">Set the limit for Google Translate API requests. A value of <code>0</code> is interpreted as no limit.</p>
+                                        <p class="description">Set the limit for Google Translate API requests. A value of
+                                            <code>0</code> is interpreted as no limit.
+                                        </p>
                                     </td>
                                 </tr>
 
@@ -1346,9 +1395,14 @@ function rssrtvr_lite_accounts_menu() {
                                 <tr>
                                     <th>Yandex Translate API key</th>
                                     <td>
-                                        <input type="text" style="width: 100%;" name="yandex_api_key" size="80" value="<?php echo esc_attr(stripslashes($accounts['yandex_api_key'])); ?>">
-                                        <p class="description">Enter your API key above in order to use Yandex Translate. If you don't have one, get it
-                                            <a href="https://cloud.yandex.com/en/docs/iam/operations/api-key/create" target="_blank">here</a> or <a href="https://translate.yandex.com/developers/keys" target="_blank">here</a>.
+                                        <input type="text" style="width: 100%;" name="yandex_api_key" size="80"
+                                            value="<?php echo esc_attr(stripslashes($accounts['yandex_api_key'])); ?>">
+                                        <p class="description">Enter your API key above in order to use Yandex Translate. If
+                                            you don't have one, get it
+                                            <a href="https://cloud.yandex.com/en/docs/iam/operations/api-key/create"
+                                                target="_blank">here</a> or <a
+                                                href="https://translate.yandex.com/developers/keys"
+                                                target="_blank">here</a>.
                                         </p>
                                         <p class="description">Both Yandex Translate API v1.5 and v2 keys are supported.</p>
                                     </td>
@@ -1357,11 +1411,14 @@ function rssrtvr_lite_accounts_menu() {
                                 <tr>
                                     <th>Yandex Translate request limit</th>
                                     <td>
-                                        <input type="number" min="0" name="yandex_api_limit" size="6" value="<?php echo esc_attr(stripslashes($accounts['yandex_api_limit']['max_requests'])); ?>">
+                                        <input type="number" min="0" name="yandex_api_limit" size="6"
+                                            value="<?php echo esc_attr(stripslashes($accounts['yandex_api_limit']['max_requests'])); ?>">
                                         <?php
                                         rssrtvr_lite_period_select($accounts['yandex_api_limit']['period'], 'yandex_api_limit_period');
                                         ?>
-                                        <p class="description">Set the limit for Yandex Translate API requests. A value of <code>0</code> is interpreted as no limit.</p>
+                                        <p class="description">Set the limit for Yandex Translate API requests. A value of
+                                            <code>0</code> is interpreted as no limit.
+                                        </p>
                                     </td>
                                 </tr>
 
@@ -1376,16 +1433,16 @@ function rssrtvr_lite_accounts_menu() {
             <div style="text-align:left;">
                 <input type="submit" name="modify_accounts" class="button-primary"
                     value="<?php esc_attr_e('Update settings', 'rss-retriever-lite'); ?>" />&nbsp;&nbsp;
-                <input type="button" name="cancel"
-                    value="<?php esc_attr_e('Cancel', 'rss-retriever-lite'); ?>"
+                <input type="button" name="cancel" value="<?php esc_attr_e('Cancel', 'rss-retriever-lite'); ?>"
                     class="button" onclick="javascript:history.go(-1)" />
             </div>
         </form>
     </div>
-<?php
+    <?php
 }
 
-function rssrtvr_lite_sanitize_user_input($input, $default = '') {
+function rssrtvr_lite_sanitize_user_input($input, $default = '')
+{
     if (is_array($default)) {
         return is_array($input) ? array_map('sanitize_text_field', $input) : [];
     }
@@ -1405,7 +1462,8 @@ function rssrtvr_lite_sanitize_user_input($input, $default = '') {
     return wp_kses_post($input);
 }
 
-function rssrtvr_lite_set_feed_options($options) {
+function rssrtvr_lite_set_feed_options($options)
+{
     $result = [];
     foreach ($options as $option => $value) {
         if (isset($_POST[$option])) {
@@ -1447,22 +1505,24 @@ function rssrtvr_lite_set_feed_options($options) {
     return $result;
 }
 
-function rssrtvr_lite_xml_syndicator_menu() {
+function rssrtvr_lite_xml_syndicator_menu()
+{
     global $rssrtvr_lite, $wpdb;
-?>
+    ?>
     <div class="wrap">
         <?php if (isset($_POST['modify_selected_feeds'])) { ?>
             <h2><?php esc_html_e('RSS Retriever Lite Syndicator - Mass Modify Selected Feeds', 'rss-retriever-lite'); ?></h2>
             <table class="widefat" style="margin: 8pt 0 8pt 0;">
                 <tr>
                     <td>
-                        <p>&#x1f4a1; Use the red check box to the left of each feed option you want to apply it to all selected feeds. Unchecked options will not be applied.</p>
+                        <p>&#x1f4a1; Use the red check box to the left of each feed option you want to apply it to all selected
+                            feeds. Unchecked options will not be applied.</p>
                     </td>
                 </tr>
             </table>
-        <?php
+            <?php
         } elseif (isset($_POST['alter_default_settings'])) {
-        ?>
+            ?>
             <h2><?php esc_html_e('RSS Retriever Lite Syndicator - Default Settings', 'rss-retriever-lite'); ?></h2>
             <table class="widefat" style="margin: 8pt 0 8pt 0;">
                 <tr>
@@ -1471,7 +1531,7 @@ function rssrtvr_lite_xml_syndicator_menu() {
                     </td>
                 </tr>
             </table>
-        <?php
+            <?php
         } else {
             echo '<h2>' . esc_html(esc_html__('RSS Retriever Lite', 'rss-retriever-lite')) . '</h2>';
         }
@@ -1546,14 +1606,14 @@ function rssrtvr_lite_xml_syndicator_menu() {
             $rssrtvr_lite->deleteFeeds(array_map('absint', (array) $_POST['feed_ids']), true, true);
             $rssrtvr_lite->showMainPage(false);
         } elseif (isset($_POST['new_feed']) && check_admin_referer('rssrtvr_lite_xml_syndicator')) {
-            $source                               = rssrtvr_lite_sanitize_user_input($_POST['feed_url']);
+            $source = rssrtvr_lite_sanitize_user_input($_POST['feed_url']);
             $rssrtvr_lite->current_feed['options'] = $rssrtvr_lite->global_options;
 
-            if (! empty($_POST['user_agent'])) {
+            if (!empty($_POST['user_agent'])) {
                 $rssrtvr_lite->current_feed['options']['user_agent'] = rssrtvr_lite_sanitize_user_input($_POST['user_agent']);
             }
 
-            if (! empty($_POST['http_headers'])) {
+            if (!empty($_POST['http_headers'])) {
                 $rssrtvr_lite->current_feed['options']['http_headers'] = rssrtvr_lite_sanitize_user_input($_POST['http_headers']);
             }
 
@@ -1577,13 +1637,13 @@ function rssrtvr_lite_xml_syndicator_menu() {
                 $interval = max(RSSRTVR_LITE_MIN_UPDATE_TIME, $interval);
             }
 
-            $feed                                  = [];
-            $feed['url']                           = rssrtvr_lite_sanitize_user_input($_POST['feed_url']);
-            $feed['title']                         = trim(stripslashes(esc_attr(rssrtvr_lite_sanitize_user_input($_POST['feed_title']), ENT_NOQUOTES)));
-            $feed['updated']                       = 0;
-            $feed['options']['interval']           = $interval;
-            $feed['options']                       = rssrtvr_lite_set_feed_options($rssrtvr_lite->global_options);
-            $id                                    = array_push($rssrtvr_lite->feeds, $feed);
+            $feed = [];
+            $feed['url'] = rssrtvr_lite_sanitize_user_input($_POST['feed_url']);
+            $feed['title'] = trim(stripslashes(esc_attr(rssrtvr_lite_sanitize_user_input($_POST['feed_title']), ENT_NOQUOTES)));
+            $feed['updated'] = 0;
+            $feed['options']['interval'] = $interval;
+            $feed['options'] = rssrtvr_lite_set_feed_options($rssrtvr_lite->global_options);
+            $id = array_push($rssrtvr_lite->feeds, $feed);
             $rssrtvr_lite->feeds_updated[$id - 1] = 0;
             update_option(RSSRTVR_LITE_SYNDICATED_FEEDS, $rssrtvr_lite->feeds);
             $rssrtvr_lite->showMainPage(false);
@@ -1592,7 +1652,7 @@ function rssrtvr_lite_xml_syndicator_menu() {
                 $_POST['date_min'] = $_POST['date_max'];
             }
             $rssrtvr_lite->global_options['interval'] = abs((int) $_POST['interval']);
-            $rssrtvr_lite->global_options             = rssrtvr_lite_set_feed_options($rssrtvr_lite->global_options);
+            $rssrtvr_lite->global_options = rssrtvr_lite_set_feed_options($rssrtvr_lite->global_options);
             update_option(RSSRTVR_LITE_FEED_OPTIONS, $rssrtvr_lite->global_options);
             $rssrtvr_lite->showMainPage(false);
         } elseif (isset($_POST['alter_default_settings']) && check_admin_referer('rssrtvr_lite_xml_syndicator')) {
@@ -1609,15 +1669,17 @@ function rssrtvr_lite_xml_syndicator_menu() {
         }
         ?>
     </div>
-<?php
+    <?php
 }
 
-function rssrtvr_lite_syndicator_log_menu() {
-?>
+function rssrtvr_lite_syndicator_log_menu()
+{
+    ?>
     <div class="wrap">
         <h2><?php esc_html_e('Syndicator Log', 'rss-retriever-lite'); ?></h2>
         <br>
-        <textarea readonly id="rssrtvr-lite-log" cols="100" rows="20" wrap="on" style="margin:0;height:30em;width:100%;background-color:white"><?php echo esc_textarea(get_option(RSSRTVR_LITE_LOG)); ?></textarea>
+        <textarea readonly id="rssrtvr-lite-log" cols="100" rows="20" wrap="on"
+            style="margin:0;height:30em;width:100%;background-color:white"><?php echo esc_textarea(get_option(RSSRTVR_LITE_LOG)); ?></textarea>
         <p>
             <a href="#rssrtvr-lite-log" class="rssrtvr-button rssrtvr-lite-copy">
                 <?php esc_html_e('Copy to clipboard', 'rss-retriever-lite'); ?>
@@ -1627,29 +1689,32 @@ function rssrtvr_lite_syndicator_log_menu() {
     <?php
 }
 
-function rssrtvr_lite_plugins_action_link($links) {
+function rssrtvr_lite_plugins_action_link($links)
+{
     $links[] = '<a href="' . esc_url(get_admin_url(null, 'admin.php?page=rssretriever_lite')) . '">Syndicator</a>';
     return $links;
 }
 
-function rssrtvr_lite_add_admin_menu_item($admin_bar) {
+function rssrtvr_lite_add_admin_menu_item($admin_bar)
+{
     $args = [
-        'id'     => 'new-cybsrseo-feed-admin-menu-item',
-        'title'  => 'RSS Retriever Lite Feed',
-        'href'   => esc_url(get_admin_url(null, 'admin.php?page=rssretriever')),
+        'id' => 'new-cybsrseo-feed-admin-menu-item',
+        'title' => 'RSS Retriever Lite Feed',
+        'href' => esc_url(get_admin_url(null, 'admin.php?page=rssretriever')),
         'parent' => 'new-content',
     ];
     $admin_bar->add_menu($args);
 }
-class RSSRtvr_LITE_Syndicator {
+class RSSRtvr_LITE_Syndicator
+{
     public $langs;
     public $post = [];
     public $link_checked;
     public $insideitem;
-    public $parents               = [];
-    public $new_tag               = false;
+    public $parents = [];
+    public $new_tag = false;
     public $polylang_translations = [];
-    public $wpml_translations     = [];
+    public $wpml_translations = [];
     public $element_tag;
     public $tag;
     public $count;
@@ -1658,10 +1723,10 @@ class RSSRtvr_LITE_Syndicator {
     public $xml_tags;
     public $posts_found;
     public $max;
-    public $current_feed     = [];
+    public $current_feed = [];
     public $current_feed_url = '';
-    public $feeds            = [];
-    public $feeds_updated    = [];
+    public $feeds = [];
+    public $feeds_updated = [];
     public $update_period;
     public $feed_title;
     public $blog_charset;
@@ -1678,9 +1743,10 @@ class RSSRtvr_LITE_Syndicator {
     public $show_report = false;
     public $document_type;
     public $parse_feed_log = '';
-    public $image_urls     = [];
+    public $image_urls = [];
 
-    function __construct() {
+    function __construct()
+    {
         global $wpdb;
 
         // phpcs:ignore WordPress.DB.DirectDatabaseQuery.NoCaching
@@ -1690,7 +1756,7 @@ class RSSRtvr_LITE_Syndicator {
             $this->feeds_updated = maybe_unserialize($option_value);
         }
 
-        $this->blog_charset   = strtoupper(get_option('blog_charset'));
+        $this->blog_charset = strtoupper(get_option('blog_charset'));
         $this->global_options = $this->init_feed_options(get_option(RSSRTVR_LITE_FEED_OPTIONS));
         update_option(RSSRTVR_LITE_FEED_OPTIONS, $this->global_options);
 
@@ -1701,7 +1767,7 @@ class RSSRtvr_LITE_Syndicator {
             $this->feeds = maybe_unserialize($option_value);
         }
 
-        if (! empty(array_filter($this->feeds))) {
+        if (!empty(array_filter($this->feeds))) {
             for ($i = 0; $i < count($this->feeds); $i++) {
                 $this->feeds[$i]['options'] = $this->init_feed_options($this->feeds[$i]['options']);
             }
@@ -1896,105 +1962,106 @@ class RSSRtvr_LITE_Syndicator {
                 'uk-tr' => '&#x1F1FA;&#x1F1E6; Ukrainian - &#x1F1F9;&#x1F1F7; Turkish',
             ],
             'GOOGLE_TRANSLATE_LANGS' => [
-                'af'    => '&#x1F1E6;&#x1F1FF; Afrikaans',
-                'sq'    => '&#x1F1E6;&#x1F1F1; Albanian',
-                'ar'    => '&#x1F1E6;&#x1F1EA; Arabic',
-                'az'    => '&#x1F1E6;&#x1F1FF; Azerbaijani',
-                'eu'    => '&#x1F1EA;&#x1F1F8; Basque',
-                'be'    => '&#x1F1E7;&#x1F1FE; Belarusian',
-                'bn'    => '&#x1F1E7;&#x1F1E9; Bengali',
-                'bg'    => '&#x1F1E7;&#x1F1EC; Bulgarian',
-                'ca'    => '&#x1F1E8;&#x1F1E6; Catalan',
+                'af' => '&#x1F1E6;&#x1F1FF; Afrikaans',
+                'sq' => '&#x1F1E6;&#x1F1F1; Albanian',
+                'ar' => '&#x1F1E6;&#x1F1EA; Arabic',
+                'az' => '&#x1F1E6;&#x1F1FF; Azerbaijani',
+                'eu' => '&#x1F1EA;&#x1F1F8; Basque',
+                'be' => '&#x1F1E7;&#x1F1FE; Belarusian',
+                'bn' => '&#x1F1E7;&#x1F1E9; Bengali',
+                'bg' => '&#x1F1E7;&#x1F1EC; Bulgarian',
+                'ca' => '&#x1F1E8;&#x1F1E6; Catalan',
                 'zh-CN' => '&#x1F1E8;&#x1F1F3; Chinese Simplified',
                 'zh-TW' => '&#x1F1E8;&#x1F1F3; Chinese Traditional',
-                'hr'    => '&#x1F1ED;&#x1F1F7; Croatian',
-                'cs'    => '&#x1F1E8;&#x1F1FF; Czech',
-                'da'    => '&#x1F1E9;&#x1F1F0; Danish',
-                'nl'    => '&#x1F1F3;&#x1F1F1; Dutch',
-                'en'    => '&#x1F1EC;&#x1F1E7; English',
-                'eo'    => '&#x1F1EA;&#x1F1F3; Esperanto',
-                'et'    => '&#x1F1EA;&#x1F1EA; Estonian',
-                'tl'    => '&#x1F1F5;&#x1F1ED; Filipino',
-                'fi'    => '&#x1F1EB;&#x1F1EE; Finnish',
-                'fr'    => '&#x1F1EB;&#x1F1F7; French',
-                'gl'    => '&#x1F1EC;&#x1F1F5; Galician',
-                'ka'    => '&#x1F1EC;&#x1F1EA; Georgian',
-                'de'    => '&#x1F1E9;&#x1F1EA; German',
-                'el'    => '&#x1F1EC;&#x1F1F7; Greek',
-                'gu'    => '&#x1F1EE;&#x1F1EA; Gujarati',
-                'ht'    => '&#x1F1ED;&#x1F1F9; Haitian Creole',
-                'iw'    => '&#x1F1EE;&#x1F1F1; Hebrew',
-                'hi'    => '&#x1F1EE;&#x1F1F3; Hindi',
-                'hu'    => '&#x1F1ED;&#x1F1FA; Hungarian',
-                'is'    => '&#x1F1EE;&#x1F1F8; Icelandic',
-                'id'    => '&#x1F1EE;&#x1F1E9; Indonesian',
-                'ga'    => '&#x1F1EE;&#x1F1EA; Irish',
-                'it'    => '&#x1F1EE;&#x1F1F9; Italian',
-                'ja'    => '&#x1F1EF;&#x1F1F5; Japanese',
-                'kn'    => '&#x1F1FA;&#x1F1F2; Kannada',
-                'ko'    => '&#x1F1F0;&#x1F1F7; Korean',
-                'la'    => '&#x1F1F1;&#x1F1FA; Latin',
-                'lv'    => '&#x1F1F1;&#x1F1FB; Latvian',
-                'lt'    => '&#x1F1F1;&#x1F1F9; Lithuanian',
-                'mk'    => '&#x1F1F2;&#x1F1F0; Macedonian',
-                'ms'    => '&#x1F1F2;&#x1F1FE; Malay',
-                'mt'    => '&#x1F1F2;&#x1F1F9; Maltese',
-                'no'    => '&#x1F1F3;&#x1F1F4; Norwegian',
-                'fa'    => '&#x1F1EE;&#x1F1F7; Persian',
-                'pl'    => '&#x1F1F5;&#x1F1F1; Polish',
-                'pt'    => '&#x1F1F5;&#x1F1F9; Portuguese',
-                'ro'    => '&#x1F1F7;&#x1F1F4; Romanian',
-                'ru'    => '&#x1F1F7;&#x1F1FA; Russian',
-                'sr'    => '&#x1F1F7;&#x1F1F8; Serbian',
-                'sk'    => '&#x1F1F8;&#x1F1F0; Slovak',
-                'sl'    => '&#x1F1F8;&#x1F1EE; Slovenian',
-                'es'    => '&#x1F1EA;&#x1F1F8; Spanish',
-                'sw'    => '&#x1F1F8;&#x1F1F3; Swahili',
-                'sv'    => '&#x1F1F8;&#x1F1EA; Swedish',
-                'ta'    => '&#x1F1F9;&#x1F1F3; Tamil',
-                'te'    => '&#x1F1F9;&#x1F1F0; Telugu',
-                'th'    => '&#x1F1F9;&#x1F1ED; Thai',
-                'tr'    => '&#x1F1F9;&#x1F1F7; Turkish',
-                'uk'    => '&#x1F1FA;&#x1F1E6; Ukrainian',
-                'ur'    => '&#x1F1F0;&#x1F1F7; Urdu',
-                'vi'    => '&#x1F1FB;&#x1F1F3; Vietnamese',
-                'cy'    => '&#x1F1EA;&#x1F1FA; Welsh',
-                'yi'    => '&#x1F1EF;&#x1F1F4; Yiddish',
+                'hr' => '&#x1F1ED;&#x1F1F7; Croatian',
+                'cs' => '&#x1F1E8;&#x1F1FF; Czech',
+                'da' => '&#x1F1E9;&#x1F1F0; Danish',
+                'nl' => '&#x1F1F3;&#x1F1F1; Dutch',
+                'en' => '&#x1F1EC;&#x1F1E7; English',
+                'eo' => '&#x1F1EA;&#x1F1F3; Esperanto',
+                'et' => '&#x1F1EA;&#x1F1EA; Estonian',
+                'tl' => '&#x1F1F5;&#x1F1ED; Filipino',
+                'fi' => '&#x1F1EB;&#x1F1EE; Finnish',
+                'fr' => '&#x1F1EB;&#x1F1F7; French',
+                'gl' => '&#x1F1EC;&#x1F1F5; Galician',
+                'ka' => '&#x1F1EC;&#x1F1EA; Georgian',
+                'de' => '&#x1F1E9;&#x1F1EA; German',
+                'el' => '&#x1F1EC;&#x1F1F7; Greek',
+                'gu' => '&#x1F1EE;&#x1F1EA; Gujarati',
+                'ht' => '&#x1F1ED;&#x1F1F9; Haitian Creole',
+                'iw' => '&#x1F1EE;&#x1F1F1; Hebrew',
+                'hi' => '&#x1F1EE;&#x1F1F3; Hindi',
+                'hu' => '&#x1F1ED;&#x1F1FA; Hungarian',
+                'is' => '&#x1F1EE;&#x1F1F8; Icelandic',
+                'id' => '&#x1F1EE;&#x1F1E9; Indonesian',
+                'ga' => '&#x1F1EE;&#x1F1EA; Irish',
+                'it' => '&#x1F1EE;&#x1F1F9; Italian',
+                'ja' => '&#x1F1EF;&#x1F1F5; Japanese',
+                'kn' => '&#x1F1FA;&#x1F1F2; Kannada',
+                'ko' => '&#x1F1F0;&#x1F1F7; Korean',
+                'la' => '&#x1F1F1;&#x1F1FA; Latin',
+                'lv' => '&#x1F1F1;&#x1F1FB; Latvian',
+                'lt' => '&#x1F1F1;&#x1F1F9; Lithuanian',
+                'mk' => '&#x1F1F2;&#x1F1F0; Macedonian',
+                'ms' => '&#x1F1F2;&#x1F1FE; Malay',
+                'mt' => '&#x1F1F2;&#x1F1F9; Maltese',
+                'no' => '&#x1F1F3;&#x1F1F4; Norwegian',
+                'fa' => '&#x1F1EE;&#x1F1F7; Persian',
+                'pl' => '&#x1F1F5;&#x1F1F1; Polish',
+                'pt' => '&#x1F1F5;&#x1F1F9; Portuguese',
+                'ro' => '&#x1F1F7;&#x1F1F4; Romanian',
+                'ru' => '&#x1F1F7;&#x1F1FA; Russian',
+                'sr' => '&#x1F1F7;&#x1F1F8; Serbian',
+                'sk' => '&#x1F1F8;&#x1F1F0; Slovak',
+                'sl' => '&#x1F1F8;&#x1F1EE; Slovenian',
+                'es' => '&#x1F1EA;&#x1F1F8; Spanish',
+                'sw' => '&#x1F1F8;&#x1F1F3; Swahili',
+                'sv' => '&#x1F1F8;&#x1F1EA; Swedish',
+                'ta' => '&#x1F1F9;&#x1F1F3; Tamil',
+                'te' => '&#x1F1F9;&#x1F1F0; Telugu',
+                'th' => '&#x1F1F9;&#x1F1ED; Thai',
+                'tr' => '&#x1F1F9;&#x1F1F7; Turkish',
+                'uk' => '&#x1F1FA;&#x1F1E6; Ukrainian',
+                'ur' => '&#x1F1F0;&#x1F1F7; Urdu',
+                'vi' => '&#x1F1FB;&#x1F1F3; Vietnamese',
+                'cy' => '&#x1F1EA;&#x1F1FA; Welsh',
+                'yi' => '&#x1F1EF;&#x1F1F4; Yiddish',
             ],
-            'DEEPL_TRANSLATE_LANGS'  => [
-                'BG'    => '&#x1f1e7;&#x1f1ec; Bulgarian',
-                'CS'    => '&#x1F1E8;&#x1F1FF; Czech',
-                'DA'    => '&#x1F1E9;&#x1F1F0; Danish',
-                'DE'    => '&#x1F1E9;&#x1F1EA; German',
-                'EL'    => '&#x1F1EC;&#x1F1F7; Greek',
+            'DEEPL_TRANSLATE_LANGS' => [
+                'BG' => '&#x1f1e7;&#x1f1ec; Bulgarian',
+                'CS' => '&#x1F1E8;&#x1F1FF; Czech',
+                'DA' => '&#x1F1E9;&#x1F1F0; Danish',
+                'DE' => '&#x1F1E9;&#x1F1EA; German',
+                'EL' => '&#x1F1EC;&#x1F1F7; Greek',
                 'EN-GB' => '&#x1F1EC;&#x1F1E7; English (British)',
                 'EN-US' => '&#x1F1FA;&#x1F1F8; English (American)',
-                'EN'    => '&#x1F1FA;&#x1F1F8; English (unspecified variant)',
-                'ES'    => '&#x1F1EA;&#x1F1F8; Spanish',
-                'ET'    => '&#x1F1EA;&#x1F1EA; Estonian',
-                'FI'    => '&#x1F1EB;&#x1F1EE; Finnish',
-                'FR'    => '&#x1F1EB;&#x1F1F7; French',
-                'HU'    => '&#x1F1ED;&#x1F1FA; Hungarian',
-                'IT'    => '&#x1F1EE;&#x1F1F9; Italian',
-                'JA'    => '&#x1F1EF;&#x1F1F5; Japanese',
-                'LT'    => '&#x1F1F1;&#x1F1F9; Lithuanian',
-                'LV'    => '&#x1F1F1;&#x1F1FB; Latvian',
-                'NL'    => '&#x1F1F3;&#x1F1F1; Dutch',
-                'PL'    => '&#x1F1F5;&#x1F1F1; Polish',
+                'EN' => '&#x1F1FA;&#x1F1F8; English (unspecified variant)',
+                'ES' => '&#x1F1EA;&#x1F1F8; Spanish',
+                'ET' => '&#x1F1EA;&#x1F1EA; Estonian',
+                'FI' => '&#x1F1EB;&#x1F1EE; Finnish',
+                'FR' => '&#x1F1EB;&#x1F1F7; French',
+                'HU' => '&#x1F1ED;&#x1F1FA; Hungarian',
+                'IT' => '&#x1F1EE;&#x1F1F9; Italian',
+                'JA' => '&#x1F1EF;&#x1F1F5; Japanese',
+                'LT' => '&#x1F1F1;&#x1F1F9; Lithuanian',
+                'LV' => '&#x1F1F1;&#x1F1FB; Latvian',
+                'NL' => '&#x1F1F3;&#x1F1F1; Dutch',
+                'PL' => '&#x1F1F5;&#x1F1F1; Polish',
                 'PT-PT' => '&#x1F1F5;&#x1F1F9; Portuguese (unspecified variant)',
                 'PT-BR' => '&#x1F1E7;&#x1F1F7; Portuguese (Brazilian)',
-                'PT'    => '&#x1F1F5;&#x1F1F9; Portuguese (unspecified variant)',
-                'RO'    => '&#x1F1F7;&#x1F1F4; Romanian',
-                'RU'    => '&#x1F1F7;&#x1F1FA; Russian',
-                'SK'    => '&#x1F1F8;&#x1F1F0; Slovak',
-                'SL'    => '&#x1F1F8;&#x1F1EE; Slovenian',
-                'SV'    => '&#x1F1F8;&#x1F1EA; Swedish',
-                'ZH'    => '&#x1F1E8;&#x1F1F3; Chinese',
+                'PT' => '&#x1F1F5;&#x1F1F9; Portuguese (unspecified variant)',
+                'RO' => '&#x1F1F7;&#x1F1F4; Romanian',
+                'RU' => '&#x1F1F7;&#x1F1FA; Russian',
+                'SK' => '&#x1F1F8;&#x1F1F0; Slovak',
+                'SL' => '&#x1F1F8;&#x1F1EE; Slovenian',
+                'SV' => '&#x1F1F8;&#x1F1EA; Swedish',
+                'ZH' => '&#x1F1E8;&#x1F1F3; Chinese',
             ],
         ];
     }
 
-    function api_overlimit($api_limit_id) {
+    function api_overlimit($api_limit_id)
+    {
         $accounts = get_option(RSSRTVR_LITE_ACCOUNTS);
 
         if (floor($accounts[$api_limit_id]['epoch'] / $accounts[$api_limit_id]['period']) !== floor(time() / $accounts[$api_limit_id]['period'])) {
@@ -2011,94 +2078,97 @@ class RSSRtvr_LITE_Syndicator {
         return true;
     }
 
-    function init_feed_options($options) {
+    function init_feed_options($options)
+    {
         $default_options = [
-            'interval'                  => 1440,
-            'delay'                     => 0,
-            'max_items'                 => 1,
-            'post_lifetime'             => 0,
-            'post_status'               => 'publish',
-            'comment_status'            => 'open',
-            'ping_status'               => 'closed',
-            'post_type'                 => 'post',
-            'custom_taxonomies'         => [],
-            'post_format'               => 'default',
-            'post_template'             => 'default',
-            'post_author'               => 1,
-            'base_date'                 => 'post',
-            'duplicate_check_method'    => 'guid',
-            'undefined_category'        => 'use_default',
-            'user_agent'                => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36',
-            'http_headers'              => '',
-            'create_tags'               => '',
-            'auto_tags'                 => '',
-            'polylang_language'         => '',
-            'wpml_language'             => '',
-            'post_tags'                 => '',
-            'post_category'             => [],
-            'date_min'                  => 0,
-            'date_max'                  => 0,
-            'xml_section_tags'          => '',
-            'preserve_titles'           => '',
-            'remove_emojis_from_slugs'  => 'on',
-            'insert_media_attachments'  => 'no',
-            'set_thumbnail'             => 'first_image',
-            'sanitize'                  => '',
-            'convert_encoding'          => '',
-            'require_thumbnail'         => '',
-            'use_fifu'                  => '',
-            'store_images'              => '',
-            'add_to_media_library'      => '',
-            'image_format'              => 'keep',
-            'compression_quality'       => 80,
-            'tags_to_woocommerce'       => '',
-            'cats_to_woocommerce'       => '',
-            'utf8_encoding'             => '',
-            'alt_post_thumbnail_src'    => '',
-            'strip_tags'                => '',
-            'post_title_template'       => '%post_title%',
-            'post_slug_template'        => '%post_title%',
-            'post_content_template'     => '%post_content%',
-            'post_excerpt_template'     => '',
-            'custom_fields'             => '',
-            'translator'                => 'none',
-            'yandex_translation_dir'    => '',
+            'interval' => 1440,
+            'delay' => 0,
+            'max_items' => 1,
+            'post_lifetime' => 0,
+            'post_status' => 'publish',
+            'comment_status' => 'open',
+            'ping_status' => 'closed',
+            'post_type' => 'post',
+            'custom_taxonomies' => [],
+            'post_format' => 'default',
+            'post_template' => 'default',
+            'post_author' => 1,
+            'base_date' => 'post',
+            'duplicate_check_method' => 'guid',
+            'undefined_category' => 'use_default',
+            'user_agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/134.0.0.0 Safari/537.36',
+            'http_headers' => '',
+            'create_tags' => '',
+            'auto_tags' => '',
+            'polylang_language' => '',
+            'wpml_language' => '',
+            'post_tags' => '',
+            'post_category' => [],
+            'date_min' => 0,
+            'date_max' => 0,
+            'xml_section_tags' => '',
+            'preserve_titles' => '',
+            'remove_emojis_from_slugs' => 'on',
+            'insert_media_attachments' => 'no',
+            'set_thumbnail' => 'first_image',
+            'sanitize' => '',
+            'convert_encoding' => '',
+            'require_thumbnail' => '',
+            'use_fifu' => '',
+            'store_images' => '',
+            'add_to_media_library' => '',
+            'image_format' => 'keep',
+            'compression_quality' => 80,
+            'tags_to_woocommerce' => '',
+            'cats_to_woocommerce' => '',
+            'utf8_encoding' => '',
+            'alt_post_thumbnail_src' => '',
+            'strip_tags' => '',
+            'post_title_template' => '%post_title%',
+            'post_slug_template' => '%post_title%',
+            'post_content_template' => '%post_content%',
+            'post_excerpt_template' => '',
+            'custom_fields' => '',
+            'translator' => 'none',
+            'yandex_translation_dir' => '',
             'google_translation_source' => '',
             'google_translation_target' => '',
-            'deepl_translation_target'  => '',
-            'deepl_use_api_free'        => 'on',
-            'filter_post_title'         => 'on',
-            'filter_post_content'       => 'on',
-            'filter_post_excerpt'       => 'on',
-            'filter_post_link'          => '',
-            'filter_all_phrases'        => '',
-            'filter_any_phrases'        => '',
-            'filter_none_phrases'       => '',
-            'filter_any_tags'           => '',
-            'filter_none_tags'          => '',
-            'filter_days_newer'         => 0,
-            'filter_days_older'         => 0,
-            'filter_post_longer'        => 0,
-            'filter_post_shorter'       => 0,
+            'deepl_translation_target' => '',
+            'deepl_use_api_free' => 'on',
+            'filter_post_title' => 'on',
+            'filter_post_content' => 'on',
+            'filter_post_excerpt' => 'on',
+            'filter_post_link' => '',
+            'filter_all_phrases' => '',
+            'filter_any_phrases' => '',
+            'filter_none_phrases' => '',
+            'filter_any_tags' => '',
+            'filter_none_tags' => '',
+            'filter_days_newer' => 0,
+            'filter_days_older' => 0,
+            'filter_post_longer' => 0,
+            'filter_post_shorter' => 0,
         ];
 
         foreach ($default_options as $key => $value) {
-            if (! isset($options[$key])) {
+            if (!isset($options[$key])) {
                 $options[$key] = $default_options[$key];
             }
         }
         return $options;
     }
 
-    function add_custom_cron_interval($schedules) {
+    function add_custom_cron_interval($schedules)
+    {
         $schedules[RSSRTVR_LITE_PC_NAME] = [
             'interval' => intval(get_option(RSSRTVR_LITE_PC_INTERVAL)) * 60,
-            'display'  => esc_html(RSSRTVR_LITE_PC_NAME),
+            'display' => esc_html(RSSRTVR_LITE_PC_NAME),
         ];
         return $schedules;
     }
 
-    function fix_excerpt($text) {
+    function fix_excerpt($text)
+    {
         if (preg_match('/<p>(.*?)<\/p>/is', $text, $matches)) {
             if (wp_strip_all_tags($text) === $matches[1]) {
                 return $matches[1];
@@ -2107,26 +2177,28 @@ class RSSRtvr_LITE_Syndicator {
         return $text;
     }
 
-    function update_feeds() {
+    function update_feeds()
+    {
         if (time() > get_option(RSSRTVR_LITE_FEED_PULL_TIME) + get_option(RSSRTVR_LITE_MAX_EXEC_TIME) + 30) {
             wp_cache_flush();
             $feed_cnt = count($this->feeds);
             if ($feed_cnt) {
-                $feed_ids          = range(0, $feed_cnt - 1);
+                $feed_ids = range(0, $feed_cnt - 1);
                 $this->show_report = false;
                 $this->syndicateFeeds($feed_ids, true);
             }
         }
     }
 
-    function delete_post_media($post_id) {
-        $post          = get_post($post_id, ARRAY_A);
+    function delete_post_media($post_id)
+    {
+        $post = get_post($post_id, ARRAY_A);
         $wp_upload_dir = wp_upload_dir();
 
         $attachments = get_children(
             [
-                'post_parent'    => $post_id,
-                'post_type'      => 'attachment',
+                'post_parent' => $post_id,
+                'post_type' => 'attachment',
                 'post_mime_type' => 'image',
             ]
         );
@@ -2154,42 +2226,45 @@ class RSSRtvr_LITE_Syndicator {
         rssrtvr_lite_delete_media_by_url($media_urls);
     }
 
-    function on_before_delete_post($post_id) {
+    function on_before_delete_post($post_id)
+    {
         if (get_post_meta($post_id, '_rssrtvr_rss_source', true)) {
             $this->delete_post_media($post_id);
         }
     }
 
-    function resetPost() {
+    function resetPost()
+    {
         global $rssrtvr_lite_images_to_attach, $rssrtvr_lite_urls_to_check;
 
         $this->skip = false;
         $this->post = [
-            'post_title'        => '',
-            'post_name'         => '',
-            'post_author'       => '',
-            'post_content'      => '',
-            'post_excerpt'      => '',
-            'guid'              => '',
-            'post_date'         => time(),
-            'post_date_gmt'     => time(),
-            'categories'        => [],
-            'tags_input'        => [],
-            'comments'          => [],
-            'media_content'     => [],
-            'media_thumbnail'   => [],
+            'post_title' => '',
+            'post_name' => '',
+            'post_author' => '',
+            'post_content' => '',
+            'post_excerpt' => '',
+            'guid' => '',
+            'post_date' => time(),
+            'post_date_gmt' => time(),
+            'categories' => [],
+            'tags_input' => [],
+            'comments' => [],
+            'media_content' => [],
+            'media_thumbnail' => [],
             'media_description' => '',
-            'enclosure_url'     => '',
-            'enclosure_type'    => '',
-            'link'              => '',
+            'enclosure_url' => '',
+            'enclosure_type' => '',
+            'link' => '',
         ];
 
-        $this->xml_tags                = [];
+        $this->xml_tags = [];
         $rssrtvr_lite_images_to_attach = [];
-        $rssrtvr_lite_urls_to_check    = [];
+        $rssrtvr_lite_urls_to_check = [];
     }
 
-    function parse_placeholders($content) {
+    function parse_placeholders($content)
+    {
         if (strpos($content, '%post_title%') !== false) {
             $content = str_replace('%post_title%', trim($this->post['post_title']), $content);
         }
@@ -2335,7 +2410,8 @@ class RSSRtvr_LITE_Syndicator {
         return trim($content);
     }
 
-    function parse_w3cdtf($w3cdate) {
+    function parse_w3cdtf($w3cdate)
+    {
         if (preg_match('/^\s*(\d{4})(-(\d{2})(-(\d{2})(T(\d{2}):(\d{2})(:(\d{2})(\.\d+)?)?(?:([-+])(\d{2}):?(\d{2})|(Z))?)?)?)?\s*$/', $w3cdate, $match)) {
             list($year, $month, $day, $hours, $minutes, $seconds) = [$match[1], $match[3], $match[5], $match[7], $match[8], $match[10]];
             if (is_null($month)) {
@@ -2345,15 +2421,15 @@ class RSSRtvr_LITE_Syndicator {
                 $day = (int) gmdate('d');
             }
             if (is_null($hours)) {
-                $hours   = (int) gmdate('H');
+                $hours = (int) gmdate('H');
                 $seconds = $minutes = 0;
             }
             $epoch = gmmktime($hours, $minutes, $seconds, $month, $day, $year);
             if ($match[14] !== 'Z') {
                 list($tz_mod, $tz_hour, $tz_min) = [$match[12], $match[13], $match[14]];
-                $tz_hour                         = (int) $tz_hour;
-                $tz_min                          = (int) $tz_min;
-                $offset_secs                     = (($tz_hour * 60) + $tz_min) * 60;
+                $tz_hour = (int) $tz_hour;
+                $tz_min = (int) $tz_min;
+                $offset_secs = (($tz_hour * 60) + $tz_min) * 60;
                 if ($tz_mod === '+') {
                     $offset_secs *= -1;
                 }
@@ -2366,25 +2442,27 @@ class RSSRtvr_LITE_Syndicator {
         }
     }
 
-    function log($message) {
-        if (! $this->preview) {
+    function log($message)
+    {
+        if (!$this->preview) {
             // phpcs:ignore WordPress.DateTime.RestrictedFunctions.date_date
             $this->parse_feed_log .= '[' . wp_unslash(date('d-m-y h:i:s')) . '] ' . wp_unslash($message) . PHP_EOL;
             update_option(RSSRTVR_LITE_LOG, $this->parse_feed_log);
         }
     }
 
-    function parseFeed($feed_url) {
-        $this->tag                  = '';
-        $this->insideitem           = 0;
-        $this->element_tag          = '';
-        $this->feed_title           = '';
-        $this->generator            = '';
-        $this->current_feed_url     = $feed_url;
+    function parseFeed($feed_url)
+    {
+        $this->tag = '';
+        $this->insideitem = 0;
+        $this->element_tag = '';
+        $this->feed_title = '';
+        $this->generator = '';
+        $this->current_feed_url = $feed_url;
         $this->feed_charset_convert = '';
-        $this->posts_found          = 0;
-        $this->failure              = false;
-        $this->document_type        = 'XML';
+        $this->posts_found = 0;
+        $this->failure = false;
+        $this->document_type = 'XML';
 
         $content = rssrtvr_lite_file_get_contents($feed_url);
 
@@ -2425,7 +2503,7 @@ class RSSRtvr_LITE_Syndicator {
             $this->feed_title = '';
         }
 
-        if (! $content || ! strlen($content)) {
+        if (!$content || !strlen($content)) {
             if (is_admin()) {
                 echo '<div id="message" class="error"><p>Unable to acquire <a href="' . esc_html(esc_url($feed_url)) . '" target="_blank">' . esc_html(urldecode($feed_url)) . '</a></p></div>';
             } else {
@@ -2449,9 +2527,10 @@ class RSSRtvr_LITE_Syndicator {
             xml_set_character_data_handler($xml_parser, [$this, 'charData']);
 
             $do_mb_convert_encoding = ($this->current_feed['options']['convert_encoding'] === 'on' && $this->feed_charset !== 'not defined' && $this->blog_charset !== strtoupper($this->feed_charset));
-            $do_uft8_encoding       = ($this->current_feed['options']['utf8_encoding'] === 'on' && $this->blog_charset === 'UTF-8');
+            $do_uft8_encoding = ($this->current_feed['options']['utf8_encoding'] === 'on' && $this->blog_charset === 'UTF-8');
 
-            $is_flvembed           = false;
+            $is_flvembed = false;
+            $is_atom_content = false;
             $this->xml_parse_error = 0;
 
             foreach ($rss_lines as $line) {
@@ -2476,6 +2555,18 @@ class RSSRtvr_LITE_Syndicator {
                         $line = '<![CDATA[' . esc_html(trim($line)) . ']]>';
                     }
                 }
+                
+                if (!$is_atom_content && preg_match('/(<content\b[^>]*>)(.*?)(<\/content>)/i', $line) && stripos($line, '<![CDATA[') === false) {
+                    $line = preg_replace('/(<content\b[^>]*>)(.*?)(<\/content>)/i', '$1<![CDATA[$2]]$3', $line);
+                }
+                elseif (!$is_atom_content && preg_match('/<content\b[^>]*>/i', $line) && stripos($line, '</content>') === false && stripos($line, '<![CDATA[') === false) {
+                    $is_atom_content = true;
+                    $line = preg_replace('/(<content\b[^>]*>)/i', '$1<![CDATA[', $line);
+                }
+                elseif ($is_atom_content && stripos($line, '</content>') !== false) {
+                    $is_atom_content = false;
+                    $line = str_ireplace('</content>', ']]></content>', $line);
+                }
 
                 xml_parse($xml_parser, $line . PHP_EOL);
 
@@ -2483,7 +2574,7 @@ class RSSRtvr_LITE_Syndicator {
 
                 if ($this->xml_parse_error) {
                     xml_parser_free($xml_parser);
-                    if (! is_admin()) {
+                    if (!is_admin()) {
                         $this->log('XML parse error ' . $this->xml_parse_error);
                     }
                     return false;
@@ -2492,8 +2583,8 @@ class RSSRtvr_LITE_Syndicator {
 
             xml_parser_free($xml_parser);
 
-            if (! $this->count) {
-                if (! is_admin()) {
+            if (!$this->count) {
+                if (!is_admin()) {
                     $this->log('0 items added from ' . $feed_url);
                 }
                 return 0;
@@ -2509,7 +2600,8 @@ class RSSRtvr_LITE_Syndicator {
         }
     }
 
-    function modifyFeeds($new_options) {
+    function modifyFeeds($new_options)
+    {
         if (
             isset($_POST['_wpnonce']) &&
             wp_verify_nonce(
@@ -2548,7 +2640,8 @@ class RSSRtvr_LITE_Syndicator {
         }
     }
 
-    private function maybe_increase_time_limit() {
+    private function maybe_increase_time_limit()
+    {
         $max_exec_time = (int) get_option('RSSRTVR_LITE_MAX_EXEC_TIME');
         if ($max_exec_time > 0 && function_exists('set_time_limit')) {
             try {
@@ -2560,11 +2653,12 @@ class RSSRtvr_LITE_Syndicator {
         }
     }
 
-    function syndicateFeeds($feed_ids, $check_time) {
+    function syndicateFeeds($feed_ids, $check_time)
+    {
         $this->maybe_increase_time_limit();
 
         $this->preview = false;
-        $feeds_cnt     = count($this->feeds);
+        $feeds_cnt = count($this->feeds);
         if (is_array($feed_ids) && count($feed_ids) > 0) {
             if ($this->show_report) {
                 @ob_end_flush();
@@ -2575,7 +2669,7 @@ class RSSRtvr_LITE_Syndicator {
             $this->parse_feed_log = '';
             for ($i = 0; $i < $feeds_cnt; $i++) {
                 if (in_array($i, $feed_ids)) {
-                    if (! $check_time || $this->getUpdateTime($i) === 'asap') {
+                    if (!$check_time || $this->getUpdateTime($i) === 'asap') {
                         update_option(RSSRTVR_LITE_FEED_PULL_TIME, time());
                         $this->feeds_updated[$i] = time();
                         update_option(RSSRTVR_LITE_FEEDS_UPDATED, $this->feeds_updated);
@@ -2594,7 +2688,7 @@ class RSSRtvr_LITE_Syndicator {
                         }
 
                         $this->count = 0;
-                        $result      = $this->parseFeed($this->current_feed['url']);
+                        $result = $this->parseFeed($this->current_feed['url']);
 
                         if ($this->show_report) {
                             if ($this->count === 1) {
@@ -2622,7 +2716,8 @@ class RSSRtvr_LITE_Syndicator {
         }
     }
 
-    function get_attributes($item) {
+    function get_attributes($item)
+    {
         $attr = '';
         foreach ($item['attr'] as $atname => $atval) {
             $attr .= ' ' . esc_html(strtolower($atname)) . '="' . esc_html($atval) . '"';
@@ -2630,29 +2725,31 @@ class RSSRtvr_LITE_Syndicator {
         return $attr;
     }
 
-    function rm_style($s) {
+    function rm_style($s)
+    {
         return trim(preg_replace('/<style.*?>.*?<\/style>/si', '', $s));
     }
 
-    function displayPost() {
+    function displayPost()
+    {
         if (empty($this->feed_title)) {
             $host = wp_parse_url($this->current_feed_url, PHP_URL_HOST);
-            if (! empty($host)) {
+            if (!empty($host)) {
                 $this->feed_title = ucfirst(str_ireplace('www.', '', $host));
             } else {
                 $this->feed_title = 'no name';
             }
         }
 
-        if (! mb_strlen(trim($this->post['post_excerpt'])) && mb_strlen(trim($this->post['media_description']))) {
+        if (!mb_strlen(trim($this->post['post_excerpt'])) && mb_strlen(trim($this->post['media_description']))) {
             $this->post['post_excerpt'] = $this->post['media_description'];
         }
 
-        if (! mb_strlen(trim($this->post['post_content']))) {
+        if (!mb_strlen(trim($this->post['post_content']))) {
             $this->post['post_content'] = $this->post['post_excerpt'];
         }
 
-        $attachment       = '';
+        $attachment = '';
         $video_extensions = wp_get_video_extensions();
         if ($this->post['enclosure_url'] !== '') {
             $ext = mb_strtolower(pathinfo($this->post['enclosure_url'], PATHINFO_EXTENSION));
@@ -2663,7 +2760,7 @@ class RSSRtvr_LITE_Syndicator {
                 }
                 $attachment .= wp_video_shortcode($video);
             } elseif ($this->post['enclosure_type'] === 'audio/mpeg') {
-                $audio       = ['src' => $this->post['enclosure_url']];
+                $audio = ['src' => $this->post['enclosure_url']];
                 $attachment .= wp_audio_shortcode($audio);
             } elseif (stripos($this->post['enclosure_type'], 'image/') !== false || $this->post['enclosure_type'] === '') {
                 $attachment .= '<img style="max-width:100%" src="' . $this->post['enclosure_url'] . '">';
@@ -2695,7 +2792,7 @@ class RSSRtvr_LITE_Syndicator {
                 $attachment .= '</div>';
             }
         }
-    ?>
+        ?>
 
         <strong>Preview mode</strong>
         <select id="preview_mode_switch">
@@ -2733,7 +2830,7 @@ class RSSRtvr_LITE_Syndicator {
             $post_content = $this->rm_style(strip_tags(rssrtvr_lite_fix_white_spaces(trim($this->post['post_content'])), "<a>$alwd"));
             $post_excerpt = $this->rm_style(strip_tags(rssrtvr_lite_fix_white_spaces(trim($this->post['post_excerpt'])), "<a>$alwd"));
 
-            if (! strlen($post_content) && strlen($post_excerpt)) {
+            if (!strlen($post_content) && strlen($post_excerpt)) {
                 $post_content = $post_excerpt;
             }
 
@@ -2762,17 +2859,17 @@ class RSSRtvr_LITE_Syndicator {
         echo '</div>';
 
         echo '<div id="full_text_view" style="display:none; overflow:auto; max-height:250pt; border:1px #ccc solid; background-color:white; padding:12px; margin:8px 0 8px; 0;">';
-        if (! empty($full_text)) {
+        if (!empty($full_text)) {
             echo wp_kses_post(wp_kses_post(wp_kses_post(force_balance_tags($full_text))));
         }
         echo '</div>';
 
         echo '<div id="xml_view" style="display:none; overflow:auto; max-height:350pt; border:1px #ccc solid; background-color:white; padding:12px; margin:8px 0 8px; 0;">';
-        if (! empty($this->xml_tags)) {
+        if (!empty($this->xml_tags)) {
             $attr = $this->get_attributes($this->xml_tags[strtolower($this->element_tag)]);
             echo '<span style="font-family: monospace, monospace;"><strong>&lt;' . esc_html(strtolower($this->element_tag)) . esc_html(esc_attr($attr)) . '&gt;</strong><br>';
             foreach ($this->xml_tags as $tag => $item) {
-                if (isset($item['val']) && $item['val'] !== '<xml section>' && (trim($item['val']) !== '' || ! empty($item['attr']))) {
+                if (isset($item['val']) && $item['val'] !== '<xml section>' && (trim($item['val']) !== '' || !empty($item['attr']))) {
                     $attr = $this->get_attributes($item);
                     echo '&nbsp;&nbsp;&nbsp;&nbsp;<strong>' . esc_html(esc_html('<' . esc_html($tag) . $attr . '>')) . '</strong>' . esc_html(trim($item['val'])) . '<strong>' . esc_html(esc_html('</' . esc_html($tag) . '>')) . '</strong><br>';
                 }
@@ -2783,22 +2880,23 @@ class RSSRtvr_LITE_Syndicator {
 
         echo '<div id="attachment_view" style="display:none; overflow:auto; max-height:350pt; border:1px #ccc solid; background-color:white; padding:12px; margin:8px 0 8px; 0;">';
         if (strlen($attachment)) {
-            echo wp_kses_post($attachment) .  '<p>Adjust the <a href="#media-attachments">Media Attachments</a> settings to handle attachments.</p>';
+            echo wp_kses_post($attachment) . '<p>Adjust the <a href="#media-attachments">Media Attachments</a> settings to handle attachments.</p>';
         }
         echo '</div>';
     }
 
-    function feedPreview($feed_url, $edit_existing = false) {
+    function feedPreview($feed_url, $edit_existing = false)
+    {
         echo '<br>';
         $this->edit_existing = $edit_existing;
-        $this->max           = 1;
-        $this->preview       = true;
+        $this->max = 1;
+        $this->preview = true;
         $this->resetPost();
         $this->count = 0;
 
         $result = $this->parseFeed($feed_url);
 
-        if (! $result) {
+        if (!$result) {
             if ($this->xml_parse_error) {
                 echo '<div id="message" class="notice is-dismissible notice-error">';
                 echo '<p><strong>RSS Retriever Lite parser error:</strong> ' . esc_html($this->xml_parse_error) . ' (' . esc_html(xml_error_string($this->xml_parse_error)) . '). Perhaps the feed is unreachable, broken or empty. ';
@@ -2808,12 +2906,13 @@ class RSSRtvr_LITE_Syndicator {
         return ($result);
     }
 
-    function startElement($parser, $name, $attribs) {
+    function startElement($parser, $name, $attribs)
+    {
         $this->tag = $name;
         $this->current_custom_field_attr[$name] = $attribs;
         $this->xml_tags[strtolower($name)]['attr'] = $attribs;
 
-        if (! isset($this->xml_tags[strtolower($name)]['val'])) {
+        if (!isset($this->xml_tags[strtolower($name)]['val'])) {
             $this->xml_tags[strtolower($name)]['val'] = '';
         }
 
@@ -2824,7 +2923,7 @@ class RSSRtvr_LITE_Syndicator {
             $this->element_tag = $name;
             $this->resetPost();
             $this->xml_tags[strtolower($name)]['attr'] = $attribs;
-            $this->xml_tags[strtolower($name)]['val']  = '<xml section>';
+            $this->xml_tags[strtolower($name)]['val'] = '<xml section>';
         } elseif (($this->insideitem <= 0) && $name === 'TITLE' && mb_strlen(trim($this->feed_title))) {
             $this->tag = '';
         }
@@ -2875,13 +2974,14 @@ class RSSRtvr_LITE_Syndicator {
             }
         }
 
-        if (strlen(trim($name)) && $this->insideitem > 0 && ! in_array($name, $this->parents)) {
-            $this->parents   = array_values($this->parents);
+        if (strlen(trim($name)) && $this->insideitem > 0 && !in_array($name, $this->parents)) {
+            $this->parents = array_values($this->parents);
             $this->parents[] = $name;
         }
     }
 
-    function endElement($parser, $name) {
+    function endElement($parser, $name)
+    {
         $this->new_tag = true;
 
         if ($name === 'CATEGORY') {
@@ -2926,7 +3026,7 @@ class RSSRtvr_LITE_Syndicator {
                         ++$this->count;
                     } else {
 
-                        if (! $this->failure) {
+                        if (!$this->failure) {
                             $this->insertPost();
                         }
 
@@ -2946,7 +3046,8 @@ class RSSRtvr_LITE_Syndicator {
         }
     }
 
-    function getCustomField($tag_name) {
+    function getCustomField($tag_name)
+    {
         if (($this->current_feed['options']['custom_fields'] ?? '') !== '') {
             $custom_fields_array = explode("\n", stripslashes(trim($this->current_feed['options']['custom_fields'])));
             foreach ($custom_fields_array as $item) {
@@ -2966,7 +3067,8 @@ class RSSRtvr_LITE_Syndicator {
         return false;
     }
 
-    function charData($parser, $data) {
+    function charData($parser, $data)
+    {
         if ($this->insideitem >= 0) {
 
             if (!$this->preview) {
@@ -2982,13 +3084,13 @@ class RSSRtvr_LITE_Syndicator {
                 $this->new_tag = false;
             }
 
-            if (($this->tag) && ! in_array($this->tag, $xml_section_tags)) {
+            if (($this->tag) && !in_array($this->tag, $xml_section_tags)) {
                 $tag = strtolower($this->tag);
-                if (! isset($this->xml_tags[$tag]['val'])) {
+                if (!isset($this->xml_tags[$tag]['val'])) {
                     $this->xml_tags[$tag]['val'] = $data;
                 } elseif ($this->new_tag && trim($this->xml_tags[$tag]['val']) !== '' && trim($data) !== '') {
                     $this->xml_tags[$tag]['val'] = trim($this->xml_tags[$tag]['val']) . ',' . $data;
-                    $this->new_tag                 = false;
+                    $this->new_tag = false;
                 } else {
                     $this->xml_tags[$tag]['val'] .= $data;
                 }
@@ -3043,7 +3145,7 @@ class RSSRtvr_LITE_Syndicator {
                     $this->post['post_content'] .= $data;
                     break;
                 case 'YANDEX:FULL-TEXT':
-                    if (! strlen(trim($this->post['post_content']))) {
+                    if (!strlen(trim($this->post['post_content']))) {
                         $this->post['post_content'] .= $data;
                     }
                     break;
@@ -3124,7 +3226,8 @@ class RSSRtvr_LITE_Syndicator {
         }
     }
 
-    function shuffleUpdateTimes($feed_ids) {
+    function shuffleUpdateTimes($feed_ids)
+    {
         if (count($feed_ids) > 0) {
             $cnt = count($this->feeds);
             for ($i = 0; $i < $cnt; $i++) {
@@ -3138,7 +3241,8 @@ class RSSRtvr_LITE_Syndicator {
         }
     }
 
-    function deleteFeeds($feed_ids, $delete_posts = false, $delele_feeds = false) {
+    function deleteFeeds($feed_ids, $delete_posts = false, $delele_feeds = false)
+    {
         global $wpdb;
         $feeds_cnt = count($feed_ids);
         if ($feeds_cnt > 0) {
@@ -3152,12 +3256,12 @@ class RSSRtvr_LITE_Syndicator {
             $posts_deleted = 0;
             if ($delete_posts) {
                 $to_delete = '(';
-                $cnt       = count($feed_ids);
+                $cnt = count($feed_ids);
                 for ($i = 0; $i < $cnt; $i++) {
                     $to_delete .= "'" . $this->feeds[$feed_ids[$i]]['url'] . "', ";
                 }
                 $to_delete .= ')';
-                $to_delete  = str_replace(', )', ')', $to_delete);
+                $to_delete = str_replace(', )', ')', $to_delete);
 
                 $urls = [];
                 foreach ($feed_ids as $feed_id) {
@@ -3167,7 +3271,7 @@ class RSSRtvr_LITE_Syndicator {
                 }
 
                 $post_ids = [];
-                if (! empty($urls)) {
+                if (!empty($urls)) {
                     $placeholders = implode(',', array_fill(0, count($urls), '%s'));
 
                     // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
@@ -3195,17 +3299,17 @@ class RSSRtvr_LITE_Syndicator {
 
             $feeds_deleted = 0;
             if ($delele_feeds) {
-                $feeds         = [];
+                $feeds = [];
                 $feeds_updated = [];
                 foreach ($this->feeds as $i => $feed) {
-                    if (! in_array($i, $feed_ids)) {
-                        $feeds[]         = $feed;
+                    if (!in_array($i, $feed_ids)) {
+                        $feeds[] = $feed;
                         $feeds_updated[] = $this->feeds_updated[$i] ?? $feed['updated'];
                     } else {
                         ++$feeds_deleted;
                     }
                 }
-                $this->feeds         = $feeds;
+                $this->feeds = $feeds;
                 $this->feeds_updated = $feeds_updated;
                 update_option(RSSRTVR_LITE_FEEDS_UPDATED, $this->feeds_updated);
             }
@@ -3215,33 +3319,34 @@ class RSSRtvr_LITE_Syndicator {
         }
     }
 
-    function convert_image($source_url) {
+    function convert_image($source_url)
+    {
 
         if ($this->current_feed['options']['image_format'] === 'keep' || $this->current_feed['options']['store_images'] !== 'on') {
             return $source_url;
         }
 
         $headers = get_headers($source_url, 1);
-        if (! isset($headers['Content-Type']) || $headers['Content-Type'] !== 'image/png') {
+        if (!isset($headers['Content-Type']) || $headers['Content-Type'] !== 'image/png') {
             return $source_url;
         }
 
-        $upload_dir  = wp_upload_dir();
+        $upload_dir = wp_upload_dir();
         $upload_path = $upload_dir['basedir'];
-        $upload_url  = $upload_dir['baseurl'];
+        $upload_url = $upload_dir['baseurl'];
 
         $relative_path = str_replace($upload_url, '', $source_url);
-        $source_path   = $upload_path . $relative_path;
+        $source_path = $upload_path . $relative_path;
 
         $new_extension = $this->current_feed['options']['image_format'] === 'webp' ? '.webp' : '.jpg';
-        $new_filename  = basename($source_path, '.png') . $new_extension;
-        $new_path      = $upload_path . esc_html(dirname($relative_path)) . '/' . $new_filename;
+        $new_filename = basename($source_path, '.png') . $new_extension;
+        $new_path = $upload_path . esc_html(dirname($relative_path)) . '/' . $new_filename;
 
         $path_parts = pathinfo($new_path);
-        $counter    = 1;
+        $counter = 1;
         while (file_exists($new_path)) {
             $new_filename = $path_parts['filename'] . '-' . esc_html($counter) . '.' . $path_parts['extension'];
-            $new_path     = $path_parts['dirname'] . '/' . $new_filename;
+            $new_path = $path_parts['dirname'] . '/' . $new_filename;
             ++$counter;
         }
 
@@ -3280,7 +3385,8 @@ class RSSRtvr_LITE_Syndicator {
     }
 
 
-    function get_article_images() {
+    function get_article_images()
+    {
         preg_match_all('/<img(.+?)src=[\'\"](.+?)[\'\"](.*?)>/is', $this->post['post_content'] . $this->post['post_excerpt'], $matches);
         if (isset($matches[2])) {
             $image_urls = $matches[2];
@@ -3303,12 +3409,13 @@ class RSSRtvr_LITE_Syndicator {
         return $image_urls;
     }
 
-    function filterPost() {
+    function filterPost()
+    {
         $this->log('Apply post filtering');
 
-        if (! empty(trim($this->current_feed['options']['filter_any_tags'])) && count($this->post['categories'])) {
+        if (!empty(trim($this->current_feed['options']['filter_any_tags'])) && count($this->post['categories'])) {
             $categories = array_map('mb_strtolower', $this->post['categories']);
-            $found      = false;
+            $found = false;
             $this->log('The post must contain any of these tags: ' . esc_html($this->current_feed['options']['filter_any_tags']));
             foreach (explode(',', $this->current_feed['options']['filter_any_tags']) as $category) {
                 if (in_array(mb_strtolower(trim($category)), $categories)) {
@@ -3316,14 +3423,14 @@ class RSSRtvr_LITE_Syndicator {
                     break;
                 }
             }
-            if (! $found) {
+            if (!$found) {
                 $this->log('The post does not meet the tag/category filtering rules');
                 $this->log('The post will not be added' . PHP_EOL);
                 return false;
             }
         }
 
-        if (! empty(trim($this->current_feed['options']['filter_none_tags'])) && count($this->post['categories'])) {
+        if (!empty(trim($this->current_feed['options']['filter_none_tags'])) && count($this->post['categories'])) {
             $categories = array_map('mb_strtolower', $this->post['categories']);
             $this->log('The post must contain none of these tags (categories): ' . esc_html($this->current_feed['options']['filter_none_tags']));
             foreach (explode(',', $this->current_feed['options']['filter_none_tags']) as $category) {
@@ -3376,11 +3483,11 @@ class RSSRtvr_LITE_Syndicator {
         }
 
         if (($this->current_feed['options']['filter_post_link'] ?? '') === 'on') {
-            if (! empty($this->current_feed['options']['filter_all_phrases'])) {
+            if (!empty($this->current_feed['options']['filter_all_phrases'])) {
                 $this->log('The post link must contain all these keywords: ' . esc_html($this->current_feed['options']['filter_all_phrases']));
                 $keywords = explode(',', $this->current_feed['options']['filter_all_phrases']);
                 foreach ($keywords as $keyword) {
-                    if (! stripos($this->post['link'], trim($keyword))) {
+                    if (!stripos($this->post['link'], trim($keyword))) {
                         $this->log('The post link does not contain all the specified keywords');
                         $this->log('The post will not be added' . PHP_EOL);
                         return false;
@@ -3388,24 +3495,24 @@ class RSSRtvr_LITE_Syndicator {
                 }
             }
 
-            if (! empty($this->current_feed['options']['filter_any_phrases'])) {
+            if (!empty($this->current_feed['options']['filter_any_phrases'])) {
                 $this->log('The post link must contain any of these keywords: ' . esc_html($this->current_feed['options']['filter_any_phrases']));
                 $keywords = explode(',', $this->current_feed['options']['filter_any_phrases']);
-                $found    = false;
+                $found = false;
                 foreach ($keywords as $keyword) {
                     if (stripos($this->post['link'], trim($keyword))) {
                         $found = true;
                         break;
                     }
                 }
-                if (! $found) {
+                if (!$found) {
                     $this->log('No mandatory keywords found in the post link');
                     $this->log('The post will not be added' . PHP_EOL);
                     return false;
                 }
             }
 
-            if (! empty($this->current_feed['options']['filter_none_phrases'])) {
+            if (!empty($this->current_feed['options']['filter_none_phrases'])) {
                 $this->log('The post link must contain none of these keywords: ' . esc_html($this->current_feed['options']['filter_none_phrases']));
                 $keywords = explode(',', $this->current_feed['options']['filter_none_phrases']);
                 foreach ($keywords as $keyword) {
@@ -3432,11 +3539,11 @@ class RSSRtvr_LITE_Syndicator {
 
         if (mb_strlen($text) > 1) {
 
-            if (! empty($this->current_feed['options']['filter_all_phrases'])) {
+            if (!empty($this->current_feed['options']['filter_all_phrases'])) {
                 $this->log('The post must contain all these phrases: ' . esc_html($this->current_feed['options']['filter_all_phrases']));
                 $keywords = explode(',', $this->current_feed['options']['filter_all_phrases']);
                 foreach ($keywords as $keyword) {
-                    if (! preg_match('/\b' . preg_quote(trim($keyword, '/')) . '\b/isu', $text)) {
+                    if (!preg_match('/\b' . preg_quote(trim($keyword, '/')) . '\b/isu', $text)) {
                         $this->log('The post does not contain all the specified keywords or phrases');
                         $this->log('The post will not be added' . PHP_EOL);
                         return false;
@@ -3444,24 +3551,24 @@ class RSSRtvr_LITE_Syndicator {
                 }
             }
 
-            if (! empty($this->current_feed['options']['filter_any_phrases'])) {
+            if (!empty($this->current_feed['options']['filter_any_phrases'])) {
                 $this->log('The post must contain any of these phrases: ' . esc_html($this->current_feed['options']['filter_any_phrases']));
                 $keywords = explode(',', $this->current_feed['options']['filter_any_phrases']);
-                $found    = false;
+                $found = false;
                 foreach ($keywords as $keyword) {
                     if (preg_match('/\b' . preg_quote(trim($keyword), '/') . '\b/isu', $text)) {
                         $found = true;
                         break;
                     }
                 }
-                if (! $found) {
+                if (!$found) {
                     $this->log('No mandatory keywords or phrases found in the post');
                     $this->log('The post will not be added' . PHP_EOL);
                     return false;
                 }
             }
 
-            if (! empty($this->current_feed['options']['filter_none_phrases'])) {
+            if (!empty($this->current_feed['options']['filter_none_phrases'])) {
                 $this->log('The post must contain none of these phrases: ' . esc_html($this->current_feed['options']['filter_none_phrases']));
                 $keywords = explode(',', $this->current_feed['options']['filter_none_phrases']);
                 foreach ($keywords as $keyword) {
@@ -3478,7 +3585,8 @@ class RSSRtvr_LITE_Syndicator {
         return true;
     }
 
-    function maskShortCodes($content) {
+    function maskShortCodes($content)
+    {
         $shtps = [
             '%link%',
             '%post_title%',
@@ -3512,11 +3620,13 @@ class RSSRtvr_LITE_Syndicator {
         return $content;
     }
 
-    function unmaskShortCodes($content) {
+    function unmaskShortCodes($content)
+    {
         return str_replace('%@@M@@', '%', $content);
     }
 
-    function remove_absolute_links($link, $source) {
+    function remove_absolute_links($link, $source)
+    {
         return preg_replace_callback(
             '/href\s*=\s*([\'"]?)' . esc_html(preg_quote($link, '/')) . '([^\'"]*#[^\'"]*)\1/',
             function ($matches) {
@@ -3526,7 +3636,8 @@ class RSSRtvr_LITE_Syndicator {
         );
     }
 
-    function process_post_template($template) {
+    function process_post_template($template)
+    {
         $res = $template;
 
         if ($this->failure || $this->skip) {
@@ -3540,19 +3651,21 @@ class RSSRtvr_LITE_Syndicator {
         return $res;
     }
 
-    function disable_thumbnails($sizes) {
+    function disable_thumbnails($sizes)
+    {
         return [];
     }
 
-    function insertPost() {
+    function insertPost()
+    {
         global $rssrtvr_lite_images_to_attach;
 
-        $this->link_checked          = 'none';
-        $this->image_urls            = [];
+        $this->link_checked = 'none';
+        $this->image_urls = [];
         $this->polylang_translations = [];
-        $this->wpml_translations     = [];
+        $this->wpml_translations = [];
 
-        if (! mb_strlen(trim($this->post['post_title']))) {
+        if (!mb_strlen(trim($this->post['post_title']))) {
             if (mb_strlen($this->post['post_excerpt'])) {
                 $text = rssrtvr_lite_strip_tags($this->post['post_excerpt']);
             } else {
@@ -3565,7 +3678,7 @@ class RSSRtvr_LITE_Syndicator {
             }
         }
 
-        if (! empty($this->post['link'])) {
+        if (!empty($this->post['link'])) {
             $this->log('Import ' . $this->post['link']);
         } else {
             $this->log('Generate a new post');
@@ -3589,15 +3702,15 @@ class RSSRtvr_LITE_Syndicator {
             }
         }
 
-        if (! mb_strlen(trim($this->post['post_excerpt'])) && mb_strlen(trim($this->post['media_description']))) {
+        if (!mb_strlen(trim($this->post['post_excerpt'])) && mb_strlen(trim($this->post['media_description']))) {
             $this->post['post_excerpt'] = $this->post['media_description'];
         }
 
-        if (! mb_strlen(trim($this->post['post_content'])) && mb_strlen(trim($this->post['post_excerpt']))) {
+        if (!mb_strlen(trim($this->post['post_content'])) && mb_strlen(trim($this->post['post_excerpt']))) {
             $this->post['post_content'] = $this->post['post_excerpt'];
         }
 
-        if (! strlen($this->post['link']) && isset($this->xml_tags['url']['val'])) {
+        if (!strlen($this->post['link']) && isset($this->xml_tags['url']['val'])) {
             $this->post['link'] = $this->xml_tags['url']['val'];
         }
 
@@ -3609,14 +3722,14 @@ class RSSRtvr_LITE_Syndicator {
             $post_date = (int) $this->post['post_date'];
         }
 
-        $post_date                      += 60 * ($this->current_feed['options']['date_min'] + wp_rand(0, $this->current_feed['options']['date_max'] - $this->current_feed['options']['date_min']));
-        $this->post['post_date']         = addslashes(gmdate('Y-m-d H:i:s', $post_date + 3600 * (int) get_option('gmt_offset')));
-        $this->post['post_modified']     = $this->post['post_date'];
-        $this->post['post_date_gmt']     = addslashes(gmdate('Y-m-d H:i:s', $post_date));
+        $post_date += 60 * ($this->current_feed['options']['date_min'] + wp_rand(0, $this->current_feed['options']['date_max'] - $this->current_feed['options']['date_min']));
+        $this->post['post_date'] = addslashes(gmdate('Y-m-d H:i:s', $post_date + 3600 * (int) get_option('gmt_offset')));
+        $this->post['post_modified'] = $this->post['post_date'];
+        $this->post['post_date_gmt'] = addslashes(gmdate('Y-m-d H:i:s', $post_date));
         $this->post['post_modified_gmt'] = $this->post['post_date_gmt'];
-        $this->post['post_status']       = 'draft';
-        $this->post['comment_status']    = $this->current_feed['options']['comment_status'];
-        $this->post['ping_status']       = $this->current_feed['options']['ping_status'];
+        $this->post['post_status'] = 'draft';
+        $this->post['comment_status'] = $this->current_feed['options']['comment_status'];
+        $this->post['ping_status'] = $this->current_feed['options']['ping_status'];
 
         $result_dup = rssrtvr_lite_post_exists($this->post);
 
@@ -3635,13 +3748,13 @@ class RSSRtvr_LITE_Syndicator {
             $this->post['post_excerpt'] = rssrtvr_lite_strip_specific_tags($this->post['post_excerpt'], explode(',', $this->current_feed['options']['strip_tags']));
         }
 
-        if (! $this->filterPost()) {
+        if (!$this->filterPost()) {
             return;
         }
 
         $this->log('Process post templates');
 
-        $this->post['post_title']   = $this->maskShortCodes($this->post['post_title']);
+        $this->post['post_title'] = $this->maskShortCodes($this->post['post_title']);
         $this->post['post_content'] = $this->maskShortCodes($this->post['post_content']);
         $this->post['post_excerpt'] = $this->maskShortCodes($this->post['post_excerpt']);
 
@@ -3675,12 +3788,12 @@ class RSSRtvr_LITE_Syndicator {
             }
         }
 
-        $this->post['post_title']   = $this->unmaskShortCodes($this->post['post_title']);
+        $this->post['post_title'] = $this->unmaskShortCodes($this->post['post_title']);
         $this->post['post_content'] = $this->unmaskShortCodes($this->post['post_content']);
         $this->post['post_excerpt'] = $this->unmaskShortCodes($this->post['post_excerpt']);
-        $rssrtvr_lite_post_name      = sanitize_title($this->post['post_title']);
+        $rssrtvr_lite_post_name = sanitize_title($this->post['post_title']);
 
-        if (! isset($this->post['tags_input']) || ! is_array($this->post['tags_input'])) {
+        if (!isset($this->post['tags_input']) || !is_array($this->post['tags_input'])) {
             $this->post['tags_input'] = [];
         }
 
@@ -3688,11 +3801,11 @@ class RSSRtvr_LITE_Syndicator {
 
         if ($this->current_feed['options']['translator'] !== 'none') {
 
-            if (! is_array($this->post['categories'])) {
+            if (!is_array($this->post['categories'])) {
                 $this->post['categories'] = [];
             }
 
-            if (! is_array($this->post['tags_input'])) {
+            if (!is_array($this->post['tags_input'])) {
                 $this->post['tags_input'] = [];
             }
 
@@ -3728,7 +3841,7 @@ class RSSRtvr_LITE_Syndicator {
             return;
         }
 
-        if (! empty($cat_ids)) {
+        if (!empty($cat_ids)) {
             $post_categories = array_merge($post_categories, $cat_ids);
         } elseif ($this->current_feed['options']['undefined_category'] === 'use_default' && empty($post_categories)) {
             $post_categories[] = get_option('default_category');
@@ -3744,7 +3857,7 @@ class RSSRtvr_LITE_Syndicator {
         if ($this->current_feed['options']['auto_tags'] === 'on') {
             $terms = get_terms(
                 [
-                    'taxonomy'   => 'post_tag',
+                    'taxonomy' => 'post_tag',
                     'hide_empty' => false,
                 ]
             );
@@ -3776,11 +3889,11 @@ class RSSRtvr_LITE_Syndicator {
             }
         }
 
-        if (! isset($this->post['post_type'])) {
+        if (!isset($this->post['post_type'])) {
             $this->post['post_type'] = $this->current_feed['options']['post_type'];
         }
 
-        if (! isset($this->post['post_author']) || $this->post['post_author'] === '') {
+        if (!isset($this->post['post_author']) || $this->post['post_author'] === '') {
             if ($this->current_feed['options']['post_author'] == 0) {
                 $wp_user_search = get_users(['role__in' => ['author', 'editor', 'administrator']]);
                 shuffle($wp_user_search);
@@ -3802,11 +3915,11 @@ class RSSRtvr_LITE_Syndicator {
 
         $this->post['tags_input'] = array_values(array_unique($this->post['tags_input']));
 
-        if (! isset($this->post['media_thumbnail'][0]) && $this->post['enclosure_url'] !== '' && stripos($this->post['enclosure_type'], 'image/') !== false) {
+        if (!isset($this->post['media_thumbnail'][0]) && $this->post['enclosure_url'] !== '' && stripos($this->post['enclosure_type'], 'image/') !== false) {
             $this->post['media_thumbnail'][0] = $this->post['enclosure_url'];
         }
 
-        if (! isset($this->post['media_thumbnail'][0]) && ! empty($this->post['media_content'][0])) {
+        if (!isset($this->post['media_thumbnail'][0]) && !empty($this->post['media_content'][0])) {
             $this->post['media_thumbnail'][0] = $this->post['media_content'][0];
         }
 
@@ -3816,7 +3929,7 @@ class RSSRtvr_LITE_Syndicator {
             $video_extensions = wp_get_video_extensions();
             if ($this->post['enclosure_url'] !== '') {
                 $attachment .= '<div class="media_block">';
-                $ext         = mb_strtolower(pathinfo($this->post['enclosure_url'], PATHINFO_EXTENSION));
+                $ext = mb_strtolower(pathinfo($this->post['enclosure_url'], PATHINFO_EXTENSION));
                 if (in_array($ext, $video_extensions)) {
                     $attachment .= '<video controls src="' . $this->post['enclosure_url'] . '"';
                     if (isset($this->post['media_thumbnail'][0])) {
@@ -3872,7 +3985,7 @@ class RSSRtvr_LITE_Syndicator {
             if (count($this->image_urls)) {
                 for ($i = 0; $i < count($this->image_urls); $i++) {
                     if (isset($this->image_urls[$i]) && strpos($this->image_urls[$i], $home) === false) {
-                        $new_image_url              = $media_urls[] = $images[] = rssrtvr_lite_save_image($this->image_urls[$i], $this->post['post_title']);
+                        $new_image_url = $media_urls[] = $images[] = rssrtvr_lite_save_image($this->image_urls[$i], $this->post['post_title']);
                         $this->post['post_content'] = str_replace($this->image_urls[$i], $new_image_url, $this->post['post_content']);
                         $this->post['post_excerpt'] = str_replace($this->image_urls[$i], $new_image_url, $this->post['post_excerpt']);
                         if ($this->show_report) {
@@ -3884,22 +3997,22 @@ class RSSRtvr_LITE_Syndicator {
             }
         }
 
-        if (empty($this->image_urls) && ! empty($o_imgs)) {
+        if (empty($this->image_urls) && !empty($o_imgs)) {
             $this->image_urls = $o_imgs;
         }
 
         if ($this->current_feed['options']['set_thumbnail'] === 'first_image') {
-            if (! empty($this->image_urls)) {
+            if (!empty($this->image_urls)) {
                 $post_thumb_src = $this->image_urls[0];
                 $this->log('Generate post thumbnail from first post image');
             }
         } elseif ($this->current_feed['options']['set_thumbnail'] === 'last_image') {
-            if (! empty($this->image_urls)) {
+            if (!empty($this->image_urls)) {
                 $post_thumb_src = $this->image_urls[count($this->image_urls) - 1];
                 $this->log('Generate post thumbnail from the last post image');
             }
         } elseif ($this->current_feed['options']['set_thumbnail'] === 'random_image') {
-            if (! empty($this->image_urls)) {
+            if (!empty($this->image_urls)) {
                 $post_thumb_src = $this->image_urls[wp_rand(0, count($this->image_urls) - 1)];
                 $this->log('Generate post thumbnail from a random post image');
             }
@@ -3937,7 +4050,7 @@ class RSSRtvr_LITE_Syndicator {
         $post_id = @wp_insert_post($this->post, true);
         rssrtvr_lite_enable_kses();
 
-        if (! is_wp_error($post_id)) {
+        if (!is_wp_error($post_id)) {
             $res = add_post_meta($post_id, '_rssrtvr_rss_source', $this->current_feed['url']);
             if ($res) {
                 $wp_insert_post_error = false;
@@ -3988,8 +4101,8 @@ class RSSRtvr_LITE_Syndicator {
         if (defined('ICL_SITEPRESS_VERSION') && isset($GLOBALS['sitepress'])) {
 
             if ($this->current_feed['options']['wpml_language'] !== '') {
-                $language_code                             = $this->current_feed['options']['wpml_language'];
-                $element_type                              = 'post_' . get_post_type($post_id);
+                $language_code = $this->current_feed['options']['wpml_language'];
+                $element_type = 'post_' . get_post_type($post_id);
                 $this->wpml_translations[$language_code] = $post_id;
 
                 $trid = null;
@@ -4007,10 +4120,10 @@ class RSSRtvr_LITE_Syndicator {
                 do_action(
                     'wpml_set_element_language_details',
                     [
-                        'element_id'           => $post_id,
-                        'element_type'         => $element_type,
-                        'trid'                 => $trid,
-                        'language_code'        => $language_code,
+                        'element_id' => $post_id,
+                        'element_type' => $element_type,
+                        'trid' => $trid,
+                        'language_code' => $language_code,
                         'source_language_code' => null,
                     ]
                 );
@@ -4023,14 +4136,14 @@ class RSSRtvr_LITE_Syndicator {
             set_post_format($post_id, $this->current_feed['options']['post_format']);
         }
 
-        if (! add_post_meta($post_id, '_rssrtvr_post_name', $rssrtvr_lite_post_name)) {
+        if (!add_post_meta($post_id, '_rssrtvr_post_name', $rssrtvr_lite_post_name)) {
             $this->log('Can\'t save the post name');
             $this->log('The post will not be added' . PHP_EOL);
             wp_delete_post($post_id, true);
             return;
         }
 
-        if (! add_post_meta($post_id, '_rssrtvr_post_link', $this->post['link'])) {
+        if (!add_post_meta($post_id, '_rssrtvr_post_link', $this->post['link'])) {
             $this->log('Can\'t save the post URL');
             $this->log('The post will not be added' . PHP_EOL);
             wp_delete_post($post_id, true);
@@ -4042,7 +4155,7 @@ class RSSRtvr_LITE_Syndicator {
         } else {
             $res = add_post_meta($post_id, '_rssrtvr_post_lifetime', 2147483647);
         }
-        if (! $res) {
+        if (!$res) {
             $this->log('Can\'t save the post lifetime');
             $this->log('The post will not be added' . PHP_EOL);
             wp_delete_post($post_id, true);
@@ -4062,8 +4175,8 @@ class RSSRtvr_LITE_Syndicator {
             }
         }
 
-        $args       = [
-            'public'   => true,
+        $args = [
+            'public' => true,
             '_builtin' => false,
         ];
         $taxonomies = get_taxonomies($args, 'objects', 'and');
@@ -4084,9 +4197,9 @@ class RSSRtvr_LITE_Syndicator {
 
                     if (isset($this->image_urls[$i]) && strpos($this->image_urls[$i], '//') != 0) {
 
-                        $image_url  = $this->image_urls[$i];
+                        $image_url = $this->image_urls[$i];
                         $upload_dir = wp_upload_dir();
-                        if (! file_exists($upload_dir['path'] . '/' . basename($image_url))) {
+                        if (!file_exists($upload_dir['path'] . '/' . basename($image_url))) {
                             $image_url = rssrtvr_lite_save_image($image_url, $post->post_title);
                         }
                         $img_path = str_replace($upload_dir['url'], $upload_dir['path'], $image_url);
@@ -4095,28 +4208,28 @@ class RSSRtvr_LITE_Syndicator {
                         $attachment_id = attachment_url_to_postid($image_url);
 
                         if (file_exists($img_path) && filesize($img_path)) {
-                            if (! $attachment_id) {
+                            if (!$attachment_id) {
                                 $wp_filetype = wp_check_filetype($upload_dir['path'] . basename($image_url), null);
-                                $attachment  = [
+                                $attachment = [
                                     'post_mime_type' => $wp_filetype['type'],
-                                    'post_title'     => preg_replace('/\.[^.]+$/', '', $post->post_title),
-                                    'post_content'   => '',
-                                    'post_status'    => 'inherit',
+                                    'post_title' => preg_replace('/\.[^.]+$/', '', $post->post_title),
+                                    'post_content' => '',
+                                    'post_status' => 'inherit',
                                 ];
 
                                 $attachment_id = wp_insert_attachment($attachment, $upload_dir['path'] . '/' . basename($image_url), $post_id);
                                 rssrtvr_lite_disable_kses();
                                 wp_update_post(
                                     [
-                                        'ID'          => $attachment_id,
+                                        'ID' => $attachment_id,
                                         'post_parent' => $post_id,
                                     ]
                                 );
                                 rssrtvr_lite_enable_kses();
-                                if (! function_exists('wp_generate_attachment_metadata')) {
+                                if (!function_exists('wp_generate_attachment_metadata')) {
                                     require_once ABSPATH . 'wp-admin/includes/image.php';
                                 }
-                                if (! function_exists('media_handle_upload')) {
+                                if (!function_exists('media_handle_upload')) {
                                     require_once ABSPATH . 'wp-admin/includes/media.php';
                                 }
                                 $attachment_data = wp_generate_attachment_metadata($attachment_id, $upload_dir['path'] . '/' . basename($image_url));
@@ -4163,7 +4276,7 @@ class RSSRtvr_LITE_Syndicator {
 
         if ($this->current_feed['options']['set_thumbnail'] !== 'no_thumb') {
 
-            if (! isset($image_url)) {
+            if (!isset($image_url)) {
                 if (preg_match_all('/src.?=.?["\']https:\/\/(www\.)?youtube\.com\/embed\/(.*?)["\'\?]/is', stripslashes($this->post['post_content'] . $this->post['post_excerpt']), $matches) && count($matches[2])) {
                     if ($this->current_feed['options']['set_thumbnail'] === 'first_image') {
                         $image_url = 'https://img.youtube.com/vi/' . $matches[2][0] . '/maxresdefault.jpg';
@@ -4175,7 +4288,7 @@ class RSSRtvr_LITE_Syndicator {
                 }
             }
 
-            if ($this->current_feed['options']['set_thumbnail'] === 'alternative_image' || ! isset($image_url)) {
+            if ($this->current_feed['options']['set_thumbnail'] === 'alternative_image' || !isset($image_url)) {
                 if (strlen(trim($this->current_feed['options']['alt_post_thumbnail_src']))) {
                     $image_url = $this->current_feed['options']['alt_post_thumbnail_src'];
                 } else {
@@ -4183,7 +4296,7 @@ class RSSRtvr_LITE_Syndicator {
                 }
             }
 
-            if (! empty($image_url)) {
+            if (!empty($image_url)) {
                 if ($this->current_feed['options']['use_fifu'] !== 'on') {
                     $thumb_id = rssrtvr_lite_attach_post_thumbnail($post_id, $image_url, $this->post['post_title']);
                     if ($thumb_id !== false) {
@@ -4209,7 +4322,7 @@ class RSSRtvr_LITE_Syndicator {
             }
 
             if (isset($post_thumb_src)) {
-                if (! add_post_meta($post_id, '_rssrtvr_thumb_source', $post_thumb_src)) {
+                if (!add_post_meta($post_id, '_rssrtvr_thumb_source', $post_thumb_src)) {
                     $this->log('Can\'t save the post thumbnail source URL' . PHP_EOL);
                     $this->delete_post_media($post_id);
                     wp_delete_post($post_id, true);
@@ -4245,7 +4358,8 @@ class RSSRtvr_LITE_Syndicator {
         }
     }
 
-    function getCategoryIds($category_names) {
+    function getCategoryIds($category_names)
+    {
         global $wpdb;
 
         $cat_ids = [];
@@ -4257,7 +4371,7 @@ class RSSRtvr_LITE_Syndicator {
                         $cat_ids[] = $cat_id['term_id'];
                     } elseif ($this->current_feed['options']['undefined_category'] === 'create_new') {
                         $term = wp_insert_term($cat_name, 'category');
-                        if (! is_wp_error($term) && isset($term['term_id'])) {
+                        if (!is_wp_error($term) && isset($term['term_id'])) {
                             $cat_ids[] = $term['term_id'];
                         }
                     }
@@ -4304,19 +4418,24 @@ class RSSRtvr_LITE_Syndicator {
         return $cat_ids;
     }
 
-    function categoryChecklist($post_id = 0, $descendents_and_self = 0, $selected_cats = false) {
+    function categoryChecklist($post_id = 0, $descendents_and_self = 0, $selected_cats = false)
+    {
         wp_category_checklist($post_id, $descendents_and_self, $selected_cats);
     }
 
-    function showChangeBox($change_selected, $name) {
+    function showChangeBox($change_selected, $name)
+    {
         if ($change_selected) {
             echo '<input type="checkbox" style="border-color: red;" name="' . 'chk_' . esc_html($name) . '" id="' . 'chk_' . esc_html($name) . '"> ';
         }
     }
 
-    function showSettings($islocal, $settings, $change_selected = false) {
+    function showSettings($islocal, $settings, $change_selected = false)
+    {
         ?>
-        <form name="feed_settings" action="<?php echo esc_url(preg_replace('/\&edit-feed-id\=[0-9]+/', '', rssrtvr_lite_REQUEST_URI())); ?>" method="post">
+        <form name="feed_settings"
+            action="<?php echo esc_url(preg_replace('/\&edit-feed-id\=[0-9]+/', '', rssrtvr_lite_REQUEST_URI())); ?>"
+            method="post">
 
             <ul class="tabs">
                 <li class="active" rel="basic">Basic</li>
@@ -4328,19 +4447,20 @@ class RSSRtvr_LITE_Syndicator {
             <div id="basic" class="tab_content">
                 <br>
                 <table class="form-table 
-				<?php
+                <?php
                 if ($change_selected) {
                     echo 'rssrtvr-form';
                 }
                 ?>
-				">
+                ">
                     <?php
                     if ($islocal) {
-                    ?>
+                        ?>
                         <tr>
                             <th scope="row">Feed title</th>
                             <td>
-                                <input type="text" name="feed_title" style="width:100%" value="<?php echo ($this->edit_existing) ? esc_html($this->feeds[(int) $_GET['edit-feed-id']]['title']) : esc_html($this->feed_title); ?>">
+                                <input type="text" name="feed_title" style="width:100%"
+                                    value="<?php echo ($this->edit_existing) ? esc_html($this->feeds[(int) $_GET['edit-feed-id']]['title']) : esc_html($this->feed_title); ?>">
                                 <p class="description">A title of feed to be used in RSS Retriever Lite Syndicator.</p>
                             </td>
                         </tr>
@@ -4358,7 +4478,10 @@ class RSSRtvr_LITE_Syndicator {
                     <?php } ?>
 
                     <tr>
-                        <th scope="row"><?php $this->showChangeBox($change_selected, 'interval'); ?><?php echo esc_html__('Check for updates every', 'rss-retriever-lite'); ?></th>
+                        <th scope="row">
+                            <?php $this->showChangeBox($change_selected, 'interval'); ?>
+                            <?php echo esc_html__('Check for updates every', 'rss-retriever-lite'); ?>
+                        </th>
                         <td>
                             <?php
                             echo '<input type="number" min="0" name="interval" value="' . esc_attr($settings['interval']) . '" size="4"> minutes.';
@@ -4368,7 +4491,10 @@ class RSSRtvr_LITE_Syndicator {
                     </tr>
 
                     <tr>
-                        <th scope="row"><?php $this->showChangeBox($change_selected, 'max_items'); ?><?php echo esc_html__('Maximum number of posts', 'rss-retriever-lite'); ?></th>
+                        <th scope="row">
+                            <?php $this->showChangeBox($change_selected, 'max_items'); ?>
+                            <?php echo esc_html__('Maximum number of posts', 'rss-retriever-lite'); ?>
+                        </th>
                         <td>
                             <?php
                             echo '<input type="number" min="0" name="max_items" value="' . esc_attr($settings['max_items']) . '" size="4">' . '<p class="description">Use low values to decrease the syndication time and improve SEO of your blog.</p>';
@@ -4377,7 +4503,10 @@ class RSSRtvr_LITE_Syndicator {
                     </tr>
 
                     <tr>
-                        <th scope="row"><?php $this->showChangeBox($change_selected, 'duplicate_check_method'); ?><?php echo esc_html__('Check for duplicates by', 'rss-retriever-lite'); ?></th>
+                        <th scope="row">
+                            <?php $this->showChangeBox($change_selected, 'duplicate_check_method'); ?>
+                            <?php echo esc_html__('Check for duplicates by', 'rss-retriever-lite'); ?>
+                        </th>
                         <td>
                             <select name="duplicate_check_method">
                                 <?php
@@ -4410,11 +4539,14 @@ class RSSRtvr_LITE_Syndicator {
                     </tr>
 
                     <tr>
-                        <th scope="row"><?php $this->showChangeBox($change_selected, 'custom_taxonomies'); ?><?php echo esc_html__('Custom taxonomies', 'rss-retriever-lite'); ?></th>
+                        <th scope="row">
+                            <?php $this->showChangeBox($change_selected, 'custom_taxonomies'); ?>
+                            <?php echo esc_html__('Custom taxonomies', 'rss-retriever-lite'); ?>
+                        </th>
                         <td>
                             <?php
-                            $args       = [
-                                'public'   => true,
+                            $args = [
+                                'public' => true,
                                 '_builtin' => false,
                             ];
                             $taxonomies = get_taxonomies($args, 'objects', 'and');
@@ -4437,19 +4569,25 @@ class RSSRtvr_LITE_Syndicator {
                             <table id="custom_taxonomy_undefined">
                                 <tr>
                                     <td style="padding:0px">
-                                        <input type="text" size="60" disabled value="No custom taxonomies defined for this post type.">
+                                        <input type="text" size="60" disabled
+                                            value="No custom taxonomies defined for this post type.">
                                     </td>
                                 </tr>
                             </table>
-                            <p class="description">Assign WordPress <em>custom taxonomies</em>. Placeholders are allowed here [<a href="https://www.rssretriever.com/documentation/#custom-taxonomies" target="_blank">?</a>]</p>
+                            <p class="description">Assign WordPress <em>custom taxonomies</em>. Placeholders are allowed here
+                                [<a href="https://www.rssretriever.com/documentation/#custom-taxonomies" target="_blank">?</a>]
+                            </p>
                         </td>
                     </tr>
 
                     <tr>
-                        <th scope="row"><?php $this->showChangeBox($change_selected, 'post_template'); ?><?php echo esc_html__('Custom post template', 'rss-retriever-lite'); ?></th>
+                        <th scope="row">
+                            <?php $this->showChangeBox($change_selected, 'post_template'); ?>
+                            <?php echo esc_html__('Custom post template', 'rss-retriever-lite'); ?>
+                        </th>
                         <td>
                             <?php
-                            $custom    = wp_get_theme()->get_post_templates();
+                            $custom = wp_get_theme()->get_post_templates();
                             $templates = ['Default'];
                             foreach ($custom as $post_type => $template) {
                                 foreach ($template as $template_file => $name) {
@@ -4468,7 +4606,10 @@ class RSSRtvr_LITE_Syndicator {
                     </tr>
 
                     <tr>
-                        <th scope="row"><?php $this->showChangeBox($change_selected, 'post_format'); ?><?php echo esc_html__('Post format', 'rss-retriever-lite'); ?></th>
+                        <th scope="row">
+                            <?php $this->showChangeBox($change_selected, 'post_format'); ?>
+                            <?php echo esc_html__('Post format', 'rss-retriever-lite'); ?>
+                        </th>
                         <td>
                             <select name="post_format">
                                 <?php
@@ -4482,7 +4623,10 @@ class RSSRtvr_LITE_Syndicator {
                     </tr>
 
                     <tr>
-                        <th scope="row"><?php $this->showChangeBox($change_selected, 'post_author'); ?><?php echo esc_html__('Post author', 'rss-retriever-lite'); ?></th>
+                        <th scope="row">
+                            <?php $this->showChangeBox($change_selected, 'post_author'); ?>
+                            <?php echo esc_html__('Post author', 'rss-retriever-lite'); ?>
+                        </th>
                         <td>
                             <select name="post_author">
                                 <?php
@@ -4490,7 +4634,7 @@ class RSSRtvr_LITE_Syndicator {
                                 foreach ($wp_user_search as $user) {
                                     echo '<option ' . ((intval($settings['post_author']) === intval($user->ID)) ? 'selected ' : '') . 'value="' . esc_attr($user->ID) . '">' . esc_html($user->display_name) . '</option>';
                                 }
-                                echo '<option ' . ((intval($settings['post_author']) === 0) ? 'selected ' : '') . 'value="0">&lt;random author&gt;</option>';
+                                echo '<option ' . ((intval($settings['post_author']) === 0) ? 'selected ' : '') . 'value="0">(random author)</option>';
                                 ?>
                             </select>
                             <p class="description">Assign the post author.</p>
@@ -4498,17 +4642,24 @@ class RSSRtvr_LITE_Syndicator {
                     </tr>
 
                     <tr>
-                        <th scope="row"><?php $this->showChangeBox($change_selected, 'post_lifetime'); ?><?php echo esc_html__('Post lifetime', 'rss-retriever-lite'); ?></th>
+                        <th scope="row">
+                            <?php $this->showChangeBox($change_selected, 'post_lifetime'); ?>
+                            <?php echo esc_html__('Post lifetime', 'rss-retriever-lite'); ?>
+                        </th>
                         <td>
                             <?php
                             echo '<input type="number" min="0" name="post_lifetime" value="' . esc_attr($settings['post_lifetime']) . '" size="4"> hours.';
                             ?>
-                            <p class="description">The period of time after which the post will be deleted. If you don't want to limit the post lifetime, set this parameter to 0.</p>
+                            <p class="description">The period of time after which the post will be deleted. If you don't want to
+                                limit the post lifetime, set this parameter to 0.</p>
                         </td>
                     </tr>
 
                     <tr>
-                        <th scope="row"><?php $this->showChangeBox($change_selected, 'post_status'); ?><?php echo esc_html__('Post status', 'rss-retriever-lite'); ?></th>
+                        <th scope="row">
+                            <?php $this->showChangeBox($change_selected, 'post_status'); ?>
+                            <?php echo esc_html__('Post status', 'rss-retriever-lite'); ?>
+                        </th>
                         <td>
                             <select name="post_status">
                                 <?php
@@ -4522,7 +4673,10 @@ class RSSRtvr_LITE_Syndicator {
                     </tr>
 
                     <tr>
-                        <th scope="row"><?php $this->showChangeBox($change_selected, 'base_date'); ?><?php echo esc_html__('Base date', 'rss-retriever-lite'); ?></th>
+                        <th scope="row">
+                            <?php $this->showChangeBox($change_selected, 'base_date'); ?>
+                            <?php echo esc_html__('Base date', 'rss-retriever-lite'); ?>
+                        </th>
                         <td>
                             <select name="base_date">
                                 <?php
@@ -4534,19 +4688,27 @@ class RSSRtvr_LITE_Syndicator {
                     </tr>
 
                     <tr>
-                        <th scope="row"><?php $this->showChangeBox($change_selected, 'date_range'); ?><?php echo esc_html__('Post date adjustment range', 'rss-retriever-lite'); ?></th>
+                        <th scope="row">
+                            <?php $this->showChangeBox($change_selected, 'date_range'); ?>
+                            <?php echo esc_html__('Post date adjustment range', 'rss-retriever-lite'); ?>
+                        </th>
                         <td>
                             <?php
                             echo '<input type="number" name="date_min" value="' . esc_attr($settings['date_min']) . '" size="6"> .. <input type="number" name="date_max" value="' . esc_attr($settings['date_max']) . '" size="6">';
                             ?>
                             minutes.
-                            <p class="description">This range will be used to randomly adjust the publication date for every generated post. For example, if you set the adjustment range as <code>[0..60]</code>,
-                                the post dates will be increased by a random value between 0 and 60 minutes. Negative values are allowed.</p>
+                            <p class="description">This range will be used to randomly adjust the publication date for every
+                                generated post. For example, if you set the adjustment range as <code>[0..60]</code>,
+                                the post dates will be increased by a random value between 0 and 60 minutes. Negative values are
+                                allowed.</p>
                         </td>
                     </tr>
 
                     <tr>
-                        <th scope="row"><?php $this->showChangeBox($change_selected, 'post_category[]'); ?><?php echo esc_html__('Categories', 'rss-retriever-lite'); ?></th>
+                        <th scope="row">
+                            <?php $this->showChangeBox($change_selected, 'post_category[]'); ?>
+                            <?php echo esc_html__('Categories', 'rss-retriever-lite'); ?>
+                        </th>
                         <td>
                             <ul id="categorychecklist" class="list:category categorychecklist form-no-clear">
                                 <div id="categories-all" class="rssretriever-ui-tabs-panel">
@@ -4560,7 +4722,10 @@ class RSSRtvr_LITE_Syndicator {
                     </tr>
 
                     <tr>
-                        <th scope="row"><?php $this->showChangeBox($change_selected, 'undefined_category'); ?><?php echo esc_html__('Undefined categories', 'rss-retriever-lite'); ?></th>
+                        <th scope="row">
+                            <?php $this->showChangeBox($change_selected, 'undefined_category'); ?>
+                            <?php echo esc_html__('Undefined categories', 'rss-retriever-lite'); ?>
+                        </th>
                         <td>
                             <select name="undefined_category">
                                 <?php
@@ -4572,12 +4737,18 @@ class RSSRtvr_LITE_Syndicator {
                                 echo '<option ' . (($settings['undefined_category'] === 'drop') ? 'selected ' : '') . 'value="drop">Do not syndicate post that doesn\'t match at least one category defined above</option>';
                                 ?>
                             </select>
-                            <p class="description">This option defines what the RSS Retriever Lite syndicator have to do if none of the post categories mutch the predefined defined ones [<a href="https://www.rssretriever.com/documentation/#undefined-categories" target="_blank">?</a>]</p>
+                            <p class="description">This option defines what the RSS Retriever Lite syndicator have to do if none
+                                of the post categories mutch the predefined defined ones [<a
+                                    href="https://www.rssretriever.com/documentation/#undefined-categories"
+                                    target="_blank">?</a>]</p>
                         </td>
                     </tr>
 
                     <tr>
-                        <th scope="row"><?php $this->showChangeBox($change_selected, 'create_tags'); ?><?php echo esc_html__('Tags from category names', 'rss-retriever-lite'); ?></th>
+                        <th scope="row">
+                            <?php $this->showChangeBox($change_selected, 'create_tags'); ?>
+                            <?php echo esc_html__('Tags from category names', 'rss-retriever-lite'); ?>
+                        </th>
                         <td>
                             <?php
                             echo '<input type="checkbox" name="create_tags" id="create_tags" ' . (($settings['create_tags'] === 'on') ? 'checked ' : '') . '>';
@@ -4587,7 +4758,10 @@ class RSSRtvr_LITE_Syndicator {
                     </tr>
 
                     <tr>
-                        <th scope="row"><?php $this->showChangeBox($change_selected, 'post_tags'); ?><?php echo esc_html__('Post tags', 'rss-retriever-lite'); ?></th>
+                        <th scope="row">
+                            <?php $this->showChangeBox($change_selected, 'post_tags'); ?>
+                            <?php echo esc_html__('Post tags', 'rss-retriever-lite'); ?>
+                        </th>
                         <td>
                             <?php
                             echo '<input type="text" style="width:100%;" name="post_tags" value="' . esc_html(stripslashes($settings['post_tags'])) . '">';
@@ -4597,37 +4771,52 @@ class RSSRtvr_LITE_Syndicator {
                     </tr>
 
                     <tr>
-                        <th scope="row"><?php $this->showChangeBox($change_selected, 'auto_tags'); ?><?php echo esc_html__('Auto tags', 'rss-retriever-lite'); ?></th>
+                        <th scope="row">
+                            <?php $this->showChangeBox($change_selected, 'auto_tags'); ?>
+                            <?php echo esc_html__('Auto tags', 'rss-retriever-lite'); ?>
+                        </th>
                         <td>
                             <?php
                             echo '<input type="checkbox" name="auto_tags" id="auto_tags" ' . (($settings['auto_tags'] === 'on') ? 'checked ' : '') . '>';
                             ?>
-                            <label for="auto_tags">if checked, the RSS Retriever Lite plugin will look for existing tags within your content and add them automatically.</label>
+                            <label for="auto_tags">if checked, the RSS Retriever Lite plugin will look for existing tags within
+                                your content and add them automatically.</label>
                         </td>
                     </tr>
 
                     <tr>
-                        <th scope="row"><?php $this->showChangeBox($change_selected, 'tags_to_woocommerce'); ?><?php echo esc_html__('Tags to WooCommerce', 'rss-retriever-lite'); ?></th>
+                        <th scope="row">
+                            <?php $this->showChangeBox($change_selected, 'tags_to_woocommerce'); ?>
+                            <?php echo esc_html__('Tags to WooCommerce', 'rss-retriever-lite'); ?>
+                        </th>
                         <td>
                             <?php
                             echo '<input type="checkbox" name="tags_to_woocommerce" id="tags_to_woocommerce" ' . (($settings['tags_to_woocommerce'] === 'on') ? 'checked ' : '') . '>';
                             ?>
-                            <label for="tags_to_woocommerce">check this option to assign importing post tags to WooCommerce product tags.</label>
+                            <label for="tags_to_woocommerce">check this option to assign importing post tags to WooCommerce
+                                product tags.</label>
                         </td>
                     </tr>
 
                     <tr>
-                        <th scope="row"><?php $this->showChangeBox($change_selected, 'cats_to_woocommerce'); ?><?php echo esc_html__('Categories to WooCommerce', 'rss-retriever-lite'); ?></th>
+                        <th scope="row">
+                            <?php $this->showChangeBox($change_selected, 'cats_to_woocommerce'); ?>
+                            <?php echo esc_html__('Categories to WooCommerce', 'rss-retriever-lite'); ?>
+                        </th>
                         <td>
                             <?php
                             echo '<input type="checkbox" name="cats_to_woocommerce" id="cats_to_woocommerce" ' . (($settings['cats_to_woocommerce'] === 'on') ? 'checked ' : '') . '>';
                             ?>
-                            <label for="cats_to_woocommerce">check this option to assign importing post categories to WooCommerce product categories.</label>
+                            <label for="cats_to_woocommerce">check this option to assign importing post categories to
+                                WooCommerce product categories.</label>
                         </td>
                     </tr>
 
                     <tr>
-                        <th scope="row"><?php $this->showChangeBox($change_selected, 'comment_status'); ?><?php echo esc_html__('Comments', 'rss-retriever-lite'); ?></th>
+                        <th scope="row">
+                            <?php $this->showChangeBox($change_selected, 'comment_status'); ?>
+                            <?php echo esc_html__('Comments', 'rss-retriever-lite'); ?>
+                        </th>
                         <td>
                             <select name="comment_status">
                                 <?php
@@ -4638,7 +4827,10 @@ class RSSRtvr_LITE_Syndicator {
                         </td>
                     </tr>
                     <tr>
-                        <th scope="row"><?php $this->showChangeBox($change_selected, 'ping_status'); ?><?php echo esc_html__('Pings', 'rss-retriever-lite'); ?></th>
+                        <th scope="row">
+                            <?php $this->showChangeBox($change_selected, 'ping_status'); ?>
+                            <?php echo esc_html__('Pings', 'rss-retriever-lite'); ?>
+                        </th>
                         <td>
                             <select name="ping_status">
                                 <?php
@@ -4654,7 +4846,7 @@ class RSSRtvr_LITE_Syndicator {
                         $languages = pll_the_languages(
                             [
                                 'hide_if_empty' => 0,
-                                'raw'           => 1,
+                                'raw' => 1,
                             ]
                         );
                         if ($settings['polylang_language'] === '') {
@@ -4665,14 +4857,16 @@ class RSSRtvr_LITE_Syndicator {
                     }
                     ?>
                     <tr>
-                        <th scope="row"><?php $this->showChangeBox($change_selected, 'polylang_language'); ?><?php echo esc_html__('Polylang language', 'rss-retriever-lite'); ?></th>
+                        <th scope="row">
+                            <?php $this->showChangeBox($change_selected, 'polylang_language'); ?>
+                            <?php echo esc_html__('Polylang language', 'rss-retriever-lite'); ?>
+                        </th>
                         <td>
-                            <select name="polylang_language"
-                                <?php
-                                if (! count($languages)) {
-                                    echo 'disabled';
-                                }
-                                ?>>
+                            <select name="polylang_language" <?php
+                            if (!count($languages)) {
+                                echo 'disabled';
+                            }
+                            ?>>
                                 <?php
                                 if (count($languages)) {
                                     foreach ($languages as $l) {
@@ -4683,7 +4877,9 @@ class RSSRtvr_LITE_Syndicator {
                                 }
                                 ?>
                             </select>
-                            <p class="description">Assign a Polylang language to every post or page generated from this content source [<a href="https://www.rssretriever.com/documentation/#polylang-language" target="_blank">?</a>]</p>
+                            <p class="description">Assign a Polylang language to every post or page generated from this content
+                                source [<a href="https://www.rssretriever.com/documentation/#polylang-language"
+                                    target="_blank">?</a>]</p>
                         </td>
                     </tr>
 
@@ -4698,14 +4894,16 @@ class RSSRtvr_LITE_Syndicator {
                     }
                     ?>
                     <tr>
-                        <th scope="row"><?php $this->showChangeBox($change_selected, 'wpml_language'); ?><?php echo esc_html__('WPML language', 'rss-retriever-lite'); ?></th>
+                        <th scope="row">
+                            <?php $this->showChangeBox($change_selected, 'wpml_language'); ?>
+                            <?php echo esc_html__('WPML language', 'rss-retriever-lite'); ?>
+                        </th>
                         <td>
-                            <select name="wpml_language"
-                                <?php
-                                if (! count($languages)) {
-                                    echo 'disabled';
-                                }
-                                ?>>
+                            <select name="wpml_language" <?php
+                            if (!count($languages)) {
+                                echo 'disabled';
+                            }
+                            ?>>
                                 <?php
                                 if (count($languages)) {
                                     foreach ($languages as $l) {
@@ -4716,7 +4914,9 @@ class RSSRtvr_LITE_Syndicator {
                                 }
                                 ?>
                             </select>
-                            <p class="description">Assign a WPML language to every post or page generated from this content source [<a href="https://www.rssretriever.com/documentation/#wpml-language" target="_blank">?</a>]</p>
+                            <p class="description">Assign a WPML language to every post or page generated from this content
+                                source [<a href="https://www.rssretriever.com/documentation/#wpml-language"
+                                    target="_blank">?</a>]</p>
                         </td>
                     </tr>
                 </table>
@@ -4725,23 +4925,30 @@ class RSSRtvr_LITE_Syndicator {
             <div id="media_handling" class="tab_content">
                 <br>
                 <table class="form-table 
-				<?php
+                <?php
                 if ($change_selected) {
                     echo 'rssrtvr-form';
                 }
                 ?>
-				">
+                ">
                     <tr>
-                        <th scope="row"><?php $this->showChangeBox($change_selected, 'store_images'); ?><?php echo esc_html__('Store images locally', 'rss-retriever-lite'); ?></th>
+                        <th scope="row">
+                            <?php $this->showChangeBox($change_selected, 'store_images'); ?>
+                            <?php echo esc_html__('Store images locally', 'rss-retriever-lite'); ?>
+                        </th>
                         <td>
                             <?php
                             echo '<input type="checkbox" name="store_images" id="store_images" ' . (($settings['store_images'] === 'on') ? 'checked ' : '') . '>';
                             ?>
-                            <label for="store_images">if checked, all images will be copied into the default uploads folder [<a href="https://www.rssretriever.com/documentation/#store-images-locally" target="_blank">?</a>]</label>
+                            <label for="store_images">if checked, all images will be copied into the default uploads folder [<a
+                                    href="https://www.rssretriever.com/documentation/#store-images-locally"
+                                    target="_blank">?</a>]</label>
                         </td>
                     </tr>
 
-                    <th scope="row" id="image_format_selector"><?php $this->showChangeBox($change_selected, 'image_format'); ?>Convert PNG images to</th>
+                    <th scope="row" id="image_format_selector">
+                        <?php $this->showChangeBox($change_selected, 'image_format'); ?>Convert PNG images to
+                    </th>
                     <td>
                         <select name="image_format" id="image_format">
                             <?php
@@ -4751,22 +4958,30 @@ class RSSRtvr_LITE_Syndicator {
                             ?>
                         </select>
                         &nbsp; <label for="compression_quality">Compression quality</label>
-                        <input style="vertical-align: middle;" type="number" id="compression_quality" name="compression_quality" min="10" max="100" value="<?php echo esc_attr($settings['compression_quality']); ?>" size="4">
+                        <input style="vertical-align: middle;" type="number" id="compression_quality" name="compression_quality"
+                            min="10" max="100" value="<?php echo esc_attr($settings['compression_quality']); ?>" size="4">
                         <p class="description">Select the format to which you want to convert locally stored PNG images.</p>
                     </td>
 
                     <tr>
-                        <th scope="row"><?php $this->showChangeBox($change_selected, 'add_to_media_library'); ?><?php echo esc_html__('Add to Media Library', 'rss-retriever-lite'); ?></th>
+                        <th scope="row">
+                            <?php $this->showChangeBox($change_selected, 'add_to_media_library'); ?>
+                            <?php echo esc_html__('Add to Media Library', 'rss-retriever-lite'); ?>
+                        </th>
                         <td>
                             <?php
                             echo '<input type="checkbox" name="add_to_media_library" id="add_to_media_library" ' . (($settings['add_to_media_library'] === 'on') ? 'checked ' : '') . '>';
                             ?>
-                            <label for="add_to_media_library">if checked, all images will be added to the WordPress Media Library [<a href="https://www.rssretriever.com/documentation/#add-to-media-library" target="_blank">?</a>]</label>
+                            <label for="add_to_media_library">if checked, all images will be added to the WordPress Media
+                                Library [<a href="https://www.rssretriever.com/documentation/#add-to-media-library"
+                                    target="_blank">?</a>]</label>
                         </td>
                     </tr>
 
                     <tr>
-                        <th scope="row"><a name="media-attachments"></a><?php $this->showChangeBox($change_selected, 'insert_media_attachments'); ?><?php echo esc_html__('Media attachments', 'rss-retriever-lite'); ?></th>
+                        <th scope="row"><a
+                                name="media-attachments"></a><?php $this->showChangeBox($change_selected, 'insert_media_attachments'); ?><?php echo esc_html__('Media attachments', 'rss-retriever-lite'); ?>
+                        </th>
                         <td>
                             <select name="insert_media_attachments">
                                 <?php
@@ -4775,22 +4990,27 @@ class RSSRtvr_LITE_Syndicator {
                                 echo '<option ' . (($settings['insert_media_attachments'] === 'bottom') ? 'selected ' : '') . 'value="bottom">Insert attachments at bottom of post</option>';
                                 ?>
                             </select>
-                            <p class="description">If enabled the RSS Retriever Lite syndicator inserts media attachments (if available) into the aggregating post. The
-                                following types of attachments are supported: <code>&lt;media:content&gt;</code>, <code>&lt;media:thumbnail&gt;</code> and <code>&lt;enclosure&gt;</code>.
+                            <p class="description">If enabled the RSS Retriever Lite syndicator inserts media attachments (if
+                                available) into the aggregating post. The
+                                following types of attachments are supported: <code>&lt;media:content&gt;</code>,
+                                <code>&lt;media:thumbnail&gt;</code> and <code>&lt;enclosure&gt;</code>.
                             </p>
                         </td>
                     </tr>
                 </table>
 
                 <table class="form-table 
-				<?php
+                <?php
                 if ($change_selected) {
                     echo 'rssrtvr-form';
                 }
                 ?>
-				">
+                ">
                     <tr>
-                        <th scope="row"><?php $this->showChangeBox($change_selected, 'set_thumbnail'); ?><?php echo esc_html__('Post thumbnails', 'rss-retriever-lite'); ?></th>
+                        <th scope="row">
+                            <?php $this->showChangeBox($change_selected, 'set_thumbnail'); ?>
+                            <?php echo esc_html__('Post thumbnails', 'rss-retriever-lite'); ?>
+                        </th>
                         <td>
                             <select id="set_thumbnail" name="set_thumbnail">
                                 <?php
@@ -4807,12 +5027,15 @@ class RSSRtvr_LITE_Syndicator {
                     </tr>
 
                     <tr>
-                        <th scope="row"><?php $this->showChangeBox($change_selected, 'use_fifu'); ?><?php echo esc_html__('Use FIFU', 'rss-retriever-lite'); ?></th>
+                        <th scope="row">
+                            <?php $this->showChangeBox($change_selected, 'use_fifu'); ?>
+                            <?php echo esc_html__('Use FIFU', 'rss-retriever-lite'); ?>
+                        </th>
                         <td>
                             <?php
                             echo '<input type="checkbox" name="use_fifu" id="use_fifu" ' . (($settings['use_fifu'] === 'on') ? 'checked ' : '') . '>';
                             echo '<label for="use_fifu">when checked, the post thumbnail won\'t be stored locally. It will be hotlinked and displayed by the <a href="https://wordpress.org/plugins/featured-image-from-url/" target="_blank">FIFU</a> plugin, which must be installed and activated.</label>';
-                            if (! function_exists('fifu_dev_set_image')) {
+                            if (!function_exists('fifu_dev_set_image')) {
                                 echo '<p class="description" id="fifu_warning">&#x26A0; FIFU is not detected. If you enable this option, the post thumbnail will not be generated. Please install and activate FIFU first.</p>';
                             }
                             ?>
@@ -4820,22 +5043,30 @@ class RSSRtvr_LITE_Syndicator {
                     </tr>
 
                     <tr>
-                        <th scope="row"><?php $this->showChangeBox($change_selected, 'alt_post_thumbnail_src'); ?><?php echo esc_html__('Alternative thumbnail source', 'rss-retriever-lite'); ?></th>
+                        <th scope="row">
+                            <?php $this->showChangeBox($change_selected, 'alt_post_thumbnail_src'); ?>
+                            <?php echo esc_html__('Alternative thumbnail source', 'rss-retriever-lite'); ?>
+                        </th>
                         <td>
                             <?php
                             echo '<input type="text" name="alt_post_thumbnail_src" style="margin:0;width:100%;" value="' . esc_html(stripslashes($settings['alt_post_thumbnail_src'])) . '" size="20">';
                             ?>
-                            <p class="description">The alternative post thumbnail source URL for the case if the source image was not found.</p>
+                            <p class="description">The alternative post thumbnail source URL for the case if the source image
+                                was not found.</p>
                         </td>
                     </tr>
 
                     <tr>
-                        <th scope="row"><?php $this->showChangeBox($change_selected, 'require_thumbnail'); ?><?php echo esc_html__('Post thumbnail is required', 'rss-retriever-lite'); ?></th>
+                        <th scope="row">
+                            <?php $this->showChangeBox($change_selected, 'require_thumbnail'); ?>
+                            <?php echo esc_html__('Post thumbnail is required', 'rss-retriever-lite'); ?>
+                        </th>
                         <td>
                             <?php
                             echo '<input type="checkbox" name="require_thumbnail" id="require_thumbnail" ' . (($settings['require_thumbnail'] === 'on') ? 'checked ' : '') . '>';
                             ?>
-                            <label for="require_thumbnail">if the plugin will not be able to create post thumbnail as specified above (e.g. the source image is missing or broken), the post will not be published.</label>
+                            <label for="require_thumbnail">if the plugin will not be able to create post thumbnail as specified
+                                above (e.g. the source image is missing or broken), the post will not be published.</label>
                         </td>
                     </tr>
 
@@ -4845,19 +5076,22 @@ class RSSRtvr_LITE_Syndicator {
             <div id="templates" class="tab_content">
                 <br>
                 <table class="form-table 
-				<?php
+                <?php
                 if ($change_selected) {
                     echo 'rssrtvr-form';
                 }
                 ?>
-				">
+                ">
                     <tr>
-                        <th scope="row"><?php $this->showChangeBox($change_selected, 'post_title_template'); ?><?php echo esc_html__('Post title', 'rss-retriever-lite'); ?></th>
+                        <th scope="row">
+                            <?php $this->showChangeBox($change_selected, 'post_title_template'); ?>
+                            <?php echo esc_html__('Post title', 'rss-retriever-lite'); ?>
+                        </th>
                         <td>
                             <?php
                             echo '<textarea style="width:100%; height:5em; background-color:white;" wrap="on" name="post_title_template" id="post_title_template">' . esc_html(stripslashes($settings['post_title_template'])) . '</textarea>';
                             echo '<p class="description">Post title template. Make sure it\'s not empty. The default template value is <code>%post_title%</code>. Placeholders and shortcodes are available for this field.</p>';
-                            if (! strlen($settings['post_title_template'])) {
+                            if (!strlen($settings['post_title_template'])) {
                                 echo '<p>&#x26A0; Your post title template is empty. This means that the post to be generated will not have a title.</p>';
                             }
                             ?>
@@ -4865,17 +5099,24 @@ class RSSRtvr_LITE_Syndicator {
                     </tr>
 
                     <tr>
-                        <th scope="row"><?php $this->showChangeBox($change_selected, 'post_slug_template'); ?><?php echo esc_html__('Post slug', 'rss-retriever-lite'); ?></th>
+                        <th scope="row">
+                            <?php $this->showChangeBox($change_selected, 'post_slug_template'); ?>
+                            <?php echo esc_html__('Post slug', 'rss-retriever-lite'); ?>
+                        </th>
                         <td>
                             <?php
                             echo '<input type="text" name="post_slug_template" style="margin:0;width:100%;" value="' . esc_html(stripslashes($settings['post_slug_template'])) . '" size="20">';
                             ?>
-                            <p class="description">Post slug template. By default it's the same as title, but you can alter it according to your needs.</p>
+                            <p class="description">Post slug template. By default it's the same as title, but you can alter it
+                                according to your needs.</p>
                         </td>
                     </tr>
 
                     <tr>
-                        <th scope="row"><?php $this->showChangeBox($change_selected, 'remove_emojis_from_slugs'); ?><?php echo esc_html__('Remove emojis from post slugs', 'rss-retriever-lite'); ?></th>
+                        <th scope="row">
+                            <?php $this->showChangeBox($change_selected, 'remove_emojis_from_slugs'); ?>
+                            <?php echo esc_html__('Remove emojis from post slugs', 'rss-retriever-lite'); ?>
+                        </th>
                         <td>
                             <?php
                             echo '<input type="checkbox" name="remove_emojis_from_slugs" id="remove_emojis_from_slugs" ' . (($settings['remove_emojis_from_slugs'] === 'on') ? 'checked ' : '') . '>';
@@ -4885,7 +5126,10 @@ class RSSRtvr_LITE_Syndicator {
                     </tr>
 
                     <tr>
-                        <th scope="row"><?php $this->showChangeBox($change_selected, 'post_content_template'); ?><?php echo esc_html__('Post content', 'rss-retriever-lite'); ?></th>
+                        <th scope="row">
+                            <?php $this->showChangeBox($change_selected, 'post_content_template'); ?>
+                            <?php echo esc_html__('Post content', 'rss-retriever-lite'); ?>
+                        </th>
                         <td>
                             <?php
                             echo '<textarea style="width:100%; height:20em; background-color:white;" wrap="on" name="post_content_template" id="post_content_template">' . esc_html(stripslashes($settings['post_content_template'])) . '</textarea>';
@@ -4898,7 +5142,10 @@ class RSSRtvr_LITE_Syndicator {
                     </tr>
 
                     <tr>
-                        <th scope="row"><?php $this->showChangeBox($change_selected, 'post_excerpt_template'); ?><?php echo esc_html__('Post excerpt', 'rss-retriever-lite'); ?></th>
+                        <th scope="row">
+                            <?php $this->showChangeBox($change_selected, 'post_excerpt_template'); ?>
+                            <?php echo esc_html__('Post excerpt', 'rss-retriever-lite'); ?>
+                        </th>
                         <td>
                             <?php
                             echo '<textarea style="width:100%; height:20em; background-color:white;" wrap="on" name="post_excerpt_template" id="post_excerpt_template">' . esc_html(stripslashes($settings['post_excerpt_template'])) . '</textarea>';
@@ -4912,31 +5159,75 @@ class RSSRtvr_LITE_Syndicator {
                         <td>
                             <div style="padding: 1em; background: #f9f9f9; border: 1px solid #ddd; border-radius: 4px;">
                                 <ul style="margin-top: 0.5em;">
-                                    <li><code>%link%</code> – <?php echo esc_html__('Post link (URL)', 'rss-retriever-lite'); ?></li>
-                                    <li><code>%post_title%</code> – <?php echo esc_html__('Post title', 'rss-retriever-lite'); ?></li>
-                                    <li><code>%post_content%</code> – <?php echo esc_html__('Post content (HTML)', 'rss-retriever-lite'); ?></li>
-                                    <li><code>%post_content[<em>max_length</em>]%</code> – <?php echo esc_html__('Shortened post content (HTML, max characters)', 'rss-retriever-lite'); ?></li>
-                                    <li><code>%post_content_notags%</code> – <?php echo esc_html__('Post content (plain text, no HTML tags)', 'rss-retriever-lite'); ?></li>
-                                    <li><code>%post_content_notags[<em>num_words</em>]%</code> – <?php echo esc_html__('Shortened post content (plain text, max words)', 'rss-retriever-lite'); ?></li>
-                                    <li><code>%post_excerpt%</code> – <?php echo esc_html__('Post excerpt (HTML)', 'rss-retriever-lite'); ?></li>
-                                    <li><code>%post_excerpt[<em>max_length</em>]%</code> – <?php echo esc_html__('Shortened post excerpt (HTML, max characters)', 'rss-retriever-lite'); ?></li>
-                                    <li><code>%post_excerpt_notags%</code> – <?php echo esc_html__('Post excerpt (plain text, no HTML tags)', 'rss-retriever-lite'); ?></li>
-                                    <li><code>%post_excerpt_notags[<em>num_words</em>]%</code> – <?php echo esc_html__('Shortened post excerpt (plain text, max words)', 'rss-retriever-lite'); ?></li>
-                                    <li><code>%enclosure_url%</code> – <?php echo esc_html__('Media enclosure URL', 'rss-retriever-lite'); ?></li>
-                                    <li><code>%media_description%</code> – <?php echo esc_html__('Media description', 'rss-retriever-lite'); ?></li>
-                                    <li><code>%media_thumbnail[<em>index</em>]%</code> – <?php echo esc_html__('Media thumbnail URL by index (0-based)', 'rss-retriever-lite'); ?></li>
-                                    <li><code>%media_content[<em>index</em>]%</code> – <?php echo esc_html__('Media content URL by index (0-based)', 'rss-retriever-lite'); ?></li>
-                                    <li><code>%youtube_video[<em>keyword</em>]%</code> – <?php echo esc_html__('Embed code for a YouTube video matching the keyword', 'rss-retriever-lite'); ?></li>
-                                    <li><code>%post_guid%</code> – <?php echo esc_html__('Post GUID', 'rss-retriever-lite'); ?></li>
-                                    <li><code>%post_date%</code> – <?php echo esc_html__('Post date (default format)', 'rss-retriever-lite'); ?></li>
-                                    <li><code>%post_date[<em>format</em>]%</code> – <?php echo esc_html__('Post date (custom PHP date format, e.g. Y-m-d)', 'rss-retriever-lite'); ?></li>
-                                    <li><code>%categories%</code> – <?php echo esc_html__('Comma-separated post categories', 'rss-retriever-lite'); ?></li>
-                                    <li><code>%xml_tags[<em>tag_name</em>]%</code> – <?php echo esc_html__('Value of an XML tag from the feed', 'rss-retriever-lite'); ?></li>
-                                    <li><code>%xml_tags_attr[<em>tag_name</em>][<em>attribute</em>]%</code> – <?php echo esc_html__('Attribute value of an XML tag', 'rss-retriever-lite'); ?></li>
+                                    <li><code>%link%</code> – <?php echo esc_html__('Post link (URL)', 'rss-retriever-lite'); ?>
+                                    </li>
+                                    <li><code>%post_title%</code> –
+                                        <?php echo esc_html__('Post title', 'rss-retriever-lite'); ?>
+                                    </li>
+                                    <li><code>%post_content%</code> –
+                                        <?php echo esc_html__('Post content (HTML)', 'rss-retriever-lite'); ?>
+                                    </li>
+                                    <li><code>%post_content[<em>max_length</em>]%</code> –
+                                        <?php echo esc_html__('Shortened post content (HTML, max characters)', 'rss-retriever-lite'); ?>
+                                    </li>
+                                    <li><code>%post_content_notags%</code> –
+                                        <?php echo esc_html__('Post content (plain text, no HTML tags)', 'rss-retriever-lite'); ?>
+                                    </li>
+                                    <li><code>%post_content_notags[<em>num_words</em>]%</code> –
+                                        <?php echo esc_html__('Shortened post content (plain text, max words)', 'rss-retriever-lite'); ?>
+                                    </li>
+                                    <li><code>%post_excerpt%</code> –
+                                        <?php echo esc_html__('Post excerpt (HTML)', 'rss-retriever-lite'); ?>
+                                    </li>
+                                    <li><code>%post_excerpt[<em>max_length</em>]%</code> –
+                                        <?php echo esc_html__('Shortened post excerpt (HTML, max characters)', 'rss-retriever-lite'); ?>
+                                    </li>
+                                    <li><code>%post_excerpt_notags%</code> –
+                                        <?php echo esc_html__('Post excerpt (plain text, no HTML tags)', 'rss-retriever-lite'); ?>
+                                    </li>
+                                    <li><code>%post_excerpt_notags[<em>num_words</em>]%</code> –
+                                        <?php echo esc_html__('Shortened post excerpt (plain text, max words)', 'rss-retriever-lite'); ?>
+                                    </li>
+                                    <li><code>%enclosure_url%</code> –
+                                        <?php echo esc_html__('Media enclosure URL', 'rss-retriever-lite'); ?>
+                                    </li>
+                                    <li><code>%media_description%</code> –
+                                        <?php echo esc_html__('Media description', 'rss-retriever-lite'); ?>
+                                    </li>
+                                    <li><code>%media_thumbnail[<em>index</em>]%</code> –
+                                        <?php echo esc_html__('Media thumbnail URL by index (0-based)', 'rss-retriever-lite'); ?>
+                                    </li>
+                                    <li><code>%media_content[<em>index</em>]%</code> –
+                                        <?php echo esc_html__('Media content URL by index (0-based)', 'rss-retriever-lite'); ?>
+                                    </li>
+                                    <li><code>%youtube_video[<em>keyword</em>]%</code> –
+                                        <?php echo esc_html__('Embed code for a YouTube video matching the keyword', 'rss-retriever-lite'); ?>
+                                    </li>
+                                    <li><code>%post_guid%</code> – <?php echo esc_html__('Post GUID', 'rss-retriever-lite'); ?>
+                                    </li>
+                                    <li><code>%post_date%</code> –
+                                        <?php echo esc_html__('Post date (default format)', 'rss-retriever-lite'); ?>
+                                    </li>
+                                    <li><code>%post_date[<em>format</em>]%</code> –
+                                        <?php echo esc_html__('Post date (custom PHP date format, e.g. Y-m-d)', 'rss-retriever-lite'); ?>
+                                    </li>
+                                    <li><code>%categories%</code> –
+                                        <?php echo esc_html__('Comma-separated post categories', 'rss-retriever-lite'); ?>
+                                    </li>
+                                    <li><code>%xml_tags[<em>tag_name</em>]%</code> –
+                                        <?php echo esc_html__('Value of an XML tag from the feed', 'rss-retriever-lite'); ?>
+                                    </li>
+                                    <li><code>%xml_tags_attr[<em>tag_name</em>][<em>attribute</em>]%</code> –
+                                        <?php echo esc_html__('Attribute value of an XML tag', 'rss-retriever-lite'); ?>
+                                    </li>
                                 </ul>
                             </div>
                             <p class="description">
-                                <strong>Usage tips:</strong> Placeholders can be used in post title, slug, content, and excerpt templates. For indexed placeholders, use a number inside brackets (e.g. <code>%media_thumbnail[0]%</code>). For custom date formats, use PHP date format strings (e.g. <code>%post_date[Y-m-d]%</code>). For XML tags and attributes, use the tag name and attribute name (e.g. <code>%xml_tags[author]%</code>, <code>%xml_tags_attr[media:content][url]%</code>)
+                                <strong>Usage tips:</strong> Placeholders can be used in post title, slug, content, and excerpt
+                                templates. For indexed placeholders, use a number inside brackets (e.g.
+                                <code>%media_thumbnail[0]%</code>). For custom date formats, use PHP date format strings (e.g.
+                                <code>%post_date[Y-m-d]%</code>). For XML tags and attributes, use the tag name and attribute
+                                name (e.g. <code>%xml_tags[author]%</code>, <code>%xml_tags_attr[media:content][url]%</code>)
                                 [<a href="https://www.rssretriever.com/documentation/#templates" target="_blank">?</a>]
                             </p>
                         </td>
@@ -4947,46 +5238,61 @@ class RSSRtvr_LITE_Syndicator {
             <div id="advanced" class="tab_content">
                 <br>
                 <table class="form-table 
-				<?php
+                <?php
                 if ($change_selected) {
                     echo 'rssrtvr-form';
                 }
                 ?>
-				">
+                ">
                     <tr>
-                        <th scope="row"><?php $this->showChangeBox($change_selected, 'strip_tags'); ?><?php echo esc_html__('HTML tags to strip', 'rss-retriever-lite'); ?></th>
+                        <th scope="row">
+                            <?php $this->showChangeBox($change_selected, 'strip_tags'); ?>
+                            <?php echo esc_html__('HTML tags to strip', 'rss-retriever-lite'); ?>
+                        </th>
                         <td>
                             <?php
                             echo '<input type="text" name="strip_tags" style="margin:0;width:100%;" value="' . esc_html(stripslashes($settings['strip_tags'])) . '" size="20">';
                             ?>
-                            <p class="description">Enter a comma-separated list of tags to remove from the generated posts, e.g.: <code>a, h1, img</code>.</p>
+                            <p class="description">Enter a comma-separated list of tags to remove from the generated posts,
+                                e.g.: <code>a, h1, img</code>.</p>
                         </td>
                     </tr>
 
                     <tr>
-                        <th scope="row"><?php $this->showChangeBox($change_selected, 'utf8_encoding'); ?><?php echo esc_html__('UTF-8 encoding', 'rss-retriever-lite'); ?></th>
+                        <th scope="row">
+                            <?php $this->showChangeBox($change_selected, 'utf8_encoding'); ?>
+                            <?php echo esc_html__('UTF-8 encoding', 'rss-retriever-lite'); ?>
+                        </th>
                         <td>
                             <?php
                             echo '<input type="checkbox" name="utf8_encoding" id="utf8_encoding" ' . (($settings['utf8_encoding'] === 'on') ? 'checked ' : '') . '>';
                             ?>
-                            <label for="utf8_encoding">enables UTF-8 encoding. This option converts an ISO-8859-1 string to UTF-8 that may be required when parsing the XML/RSS feeds containing invalid UTF-8 start bytes e.g. <code>
-                                    <0x92>
-                                </code>.</label>
+                            <label for="utf8_encoding">enables UTF-8 encoding. This option converts an ISO-8859-1 string to
+                                UTF-8 that may be required when parsing
+                                the XML/RSS feeds containing invalid UTF-8 start bytes e.g.
+                                <code><0x92></code>.</label>
                         </td>
                     </tr>
 
                     <tr>
-                        <th scope="row"><?php $this->showChangeBox($change_selected, 'convert_encoding'); ?><?php echo esc_html__('Convert character encoding', 'rss-retriever-lite'); ?></th>
+                        <th scope="row">
+                            <?php $this->showChangeBox($change_selected, 'convert_encoding'); ?>
+                            <?php echo esc_html__('Convert character encoding', 'rss-retriever-lite'); ?>
+                        </th>
                         <td>
                             <?php
                             echo '<input type="checkbox" name="convert_encoding" id="convert_encoding" ' . (($settings['convert_encoding'] === 'on') ? 'checked ' : '') . '>';
                             ?>
-                            <label for="convert_encoding">enables character encoding conversion. This option may be useful for parsing XML/RSS feeds in national character sets other than UTF-8.</label>
+                            <label for="convert_encoding">enables character encoding conversion. This option may be useful for
+                                parsing XML/RSS feeds in national character sets other than UTF-8.</label>
                         </td>
                     </tr>
 
                     <tr>
-                        <th scope="row"><?php $this->showChangeBox($change_selected, 'sanitize'); ?><?php echo esc_html__('Sanitize content', 'rss-retriever-lite'); ?></th>
+                        <th scope="row">
+                            <?php $this->showChangeBox($change_selected, 'sanitize'); ?>
+                            <?php echo esc_html__('Sanitize content', 'rss-retriever-lite'); ?>
+                        </th>
                         <td>
                             <?php
                             echo '<input type="checkbox" name="sanitize" id="sanitize" ' . (($settings['sanitize'] === 'on') ? 'checked ' : '') . '>';
@@ -4996,7 +5302,10 @@ class RSSRtvr_LITE_Syndicator {
                     </tr>
 
                     <tr>
-                        <th scope="row"><?php $this->showChangeBox($change_selected, 'translator'); ?><?php echo esc_html__('Translation', 'rss-retriever-lite'); ?></th>
+                        <th scope="row">
+                            <?php $this->showChangeBox($change_selected, 'translator'); ?>
+                            <?php echo esc_html__('Translation', 'rss-retriever-lite'); ?>
+                        </th>
                         <td>
                             <select name="translator" id="rssrtvr-lite-translator">
                                 <?php
@@ -5006,12 +5315,14 @@ class RSSRtvr_LITE_Syndicator {
                                 echo '<option ' . esc_html(selected($settings['translator'], 'google_translate', false)) . ' value="google_translate">Use Google Translate</option>';
                                 ?>
                             </select>
-                            <p class="description"><strong>Important</strong>: if the plugin will not be able to translate the article, the post won't be added.</p>
+                            <p class="description"><strong>Important</strong>: if the plugin will not be able to translate the
+                                article, the post won't be added.</p>
 
                             <div id="yandex_translate_settings">
                                 <table class="rssrtvr-box8">
                                     <tr>
-                                        <th><?php $this->showChangeBox($change_selected, 'yandex_translation_dir'); ?>Direction</th>
+                                        <th><?php $this->showChangeBox($change_selected, 'yandex_translation_dir'); ?>Direction
+                                        </th>
                                         <td><select name="yandex_translation_dir">
                                                 <?php
                                                 $langs = $this->langs['YANDEX_TRANSLATE_LANGS'];
@@ -5029,7 +5340,8 @@ class RSSRtvr_LITE_Syndicator {
                             <div id="google_translate_settings">
                                 <table class="rssrtvr-box8">
                                     <tr>
-                                        <th><?php $this->showChangeBox($change_selected, 'google_translation_source'); ?>Source</th>
+                                        <th><?php $this->showChangeBox($change_selected, 'google_translation_source'); ?>Source
+                                        </th>
                                         <td><select name="google_translation_source">
                                                 <?php
                                                 $langs = $this->langs['GOOGLE_TRANSLATE_LANGS'];
@@ -5042,7 +5354,8 @@ class RSSRtvr_LITE_Syndicator {
                                         </td>
                                     </tr>
                                     <tr>
-                                        <th><?php $this->showChangeBox($change_selected, 'google_translation_target'); ?>Target</th>
+                                        <th><?php $this->showChangeBox($change_selected, 'google_translation_target'); ?>Target
+                                        </th>
                                         <td><select name="google_translation_target">
                                                 <?php
                                                 foreach ($langs as $dir => $lang) {
@@ -5058,7 +5371,8 @@ class RSSRtvr_LITE_Syndicator {
                             <div id="deepl_translate_settings">
                                 <table class="rssrtvr-box8">
                                     <tr>
-                                        <th><?php $this->showChangeBox($change_selected, 'deepl_translation_target'); ?>Target language</th>
+                                        <th><?php $this->showChangeBox($change_selected, 'deepl_translation_target'); ?>Target
+                                            language</th>
                                         <td>
                                             <select name="deepl_translation_target">
                                                 <?php
@@ -5071,15 +5385,17 @@ class RSSRtvr_LITE_Syndicator {
                                         </td>
                                     </tr>
                                     <tr>
-                                        <th><?php $this->showChangeBox($change_selected, 'deepl_use_api_free'); ?>Use DeepL API Free</th>
+                                        <th><?php $this->showChangeBox($change_selected, 'deepl_use_api_free'); ?>Use DeepL API
+                                            Free</th>
                                         <td>
-                                            <input type="checkbox" name="deepl_use_api_free" id="deepl_use_api_free"
-                                                <?php
-                                                if ($settings['deepl_use_api_free'] === 'on') {
-                                                    echo 'checked';
-                                                }
-                                                ?> />
-                                            <label for="deepl_use_api_free">DeepL API Free is a variant of our DeepL API Pro plan that allows developers to translate up to 500,000 characters per month for free.</label>
+                                            <input type="checkbox" name="deepl_use_api_free" id="deepl_use_api_free" <?php
+                                            if ($settings['deepl_use_api_free'] === 'on') {
+                                                echo 'checked';
+                                            }
+                                            ?> />
+                                            <label for="deepl_use_api_free">DeepL API Free is a variant of our DeepL API Pro
+                                                plan that allows developers to translate up to 500,000 characters per month for
+                                                free.</label>
                                         </td>
                                     </tr>
                                 </table>
@@ -5101,7 +5417,8 @@ class RSSRtvr_LITE_Syndicator {
 
                             <p class="description">
                                 Format: <code>xml_tag_name-&gt;custom_field_name</code><br>
-                                The tag name on the left must match the XML source. The field name on the right is a WordPress custom field (meta key).
+                                The tag name on the left must match the XML source. The field name on the right is a WordPress
+                                custom field (meta key).
                             </p>
                         </td>
                     </tr>
@@ -5112,14 +5429,17 @@ class RSSRtvr_LITE_Syndicator {
             <div id="filtering" class="tab_content">
                 <br>
                 <table class="form-table 
-				<?php
+                <?php
                 if ($change_selected) {
                     echo 'rssrtvr-form';
                 }
                 ?>
-				">
+                ">
                     <tr>
-                        <th scope="row"><?php $this->showChangeBox($change_selected, 'filter_post_title'); ?><?php echo esc_html__('Apply filtering to', 'rss-retriever-lite'); ?></th>
+                        <th scope="row">
+                            <?php $this->showChangeBox($change_selected, 'filter_post_title'); ?>
+                            <?php echo esc_html__('Apply filtering to', 'rss-retriever-lite'); ?>
+                        </th>
                         <td>
                             <?php
                             echo '<input type="checkbox" name="filter_post_title" id="filter_post_title" ' . (($settings['filter_post_title'] === 'on') ? 'checked ' : '') . '> <label for="filter_post_title">post title</label> &nbsp; ';
@@ -5131,7 +5451,10 @@ class RSSRtvr_LITE_Syndicator {
                     </tr>
 
                     <tr>
-                        <th scope="row"><?php $this->showChangeBox($change_selected, 'filter_any_phrases'); ?><?php echo esc_html__('Must contain any of these keywords', 'rss-retriever-lite'); ?></th>
+                        <th scope="row">
+                            <?php $this->showChangeBox($change_selected, 'filter_any_phrases'); ?>
+                            <?php echo esc_html__('Must contain any of these keywords', 'rss-retriever-lite'); ?>
+                        </th>
                         <td>
                             <?php echo '<input type="text" style="width:100%" name="filter_any_phrases" value="' . esc_html(stripslashes($settings['filter_any_phrases'])) . '">'; ?>
                             <p class="description">Separate keywords and phrases with commas.</p>
@@ -5139,7 +5462,10 @@ class RSSRtvr_LITE_Syndicator {
                     </tr>
 
                     <tr>
-                        <th scope="row"><?php $this->showChangeBox($change_selected, 'filter_all_phrases'); ?><?php echo esc_html__('Must contain all these keywords', 'rss-retriever-lite'); ?></th>
+                        <th scope="row">
+                            <?php $this->showChangeBox($change_selected, 'filter_all_phrases'); ?>
+                            <?php echo esc_html__('Must contain all these keywords', 'rss-retriever-lite'); ?>
+                        </th>
                         <td>
                             <?php echo '<input type="text" style="width:100%" name="filter_all_phrases" value="' . esc_html(stripslashes($settings['filter_all_phrases'])) . '">'; ?>
                             <p class="description">Separate keywords and phrases with commas.</p>
@@ -5147,7 +5473,10 @@ class RSSRtvr_LITE_Syndicator {
                     </tr>
 
                     <tr>
-                        <th scope="row"><?php $this->showChangeBox($change_selected, 'filter_none_phrases'); ?><?php echo esc_html__('Must contain none of these keywords', 'rss-retriever-lite'); ?></th>
+                        <th scope="row">
+                            <?php $this->showChangeBox($change_selected, 'filter_none_phrases'); ?>
+                            <?php echo esc_html__('Must contain none of these keywords', 'rss-retriever-lite'); ?>
+                        </th>
                         <td>
                             <?php echo '<input type="text" style="width:100%" name="filter_none_phrases" value="' . esc_html(stripslashes($settings['filter_none_phrases'])) . '"'; ?>
                             <p class="description">Separate keywords and phrases with commas.</p>
@@ -5155,7 +5484,10 @@ class RSSRtvr_LITE_Syndicator {
                     </tr>
 
                     <tr>
-                        <th scope="row"><?php $this->showChangeBox($change_selected, 'filter_any_tags'); ?><?php echo esc_html__('Must contain any of these tags', 'rss-retriever-lite'); ?></th>
+                        <th scope="row">
+                            <?php $this->showChangeBox($change_selected, 'filter_any_tags'); ?>
+                            <?php echo esc_html__('Must contain any of these tags', 'rss-retriever-lite'); ?>
+                        </th>
                         <td>
                             <?php echo '<input type="text" style="width:100%" name="filter_any_tags" value="' . esc_html(stripslashes($settings['filter_any_tags'])) . '"'; ?>
                             <p class="description">Separate tags and phrases with commas.</p>
@@ -5163,7 +5495,10 @@ class RSSRtvr_LITE_Syndicator {
                     </tr>
 
                     <tr>
-                        <th scope="row"><?php $this->showChangeBox($change_selected, 'filter_none_tags'); ?><?php echo esc_html__('Must contain none of these tags', 'rss-retriever-lite'); ?></th>
+                        <th scope="row">
+                            <?php $this->showChangeBox($change_selected, 'filter_none_tags'); ?>
+                            <?php echo esc_html__('Must contain none of these tags', 'rss-retriever-lite'); ?>
+                        </th>
                         <td>
                             <?php echo '<input type="text" style="width:100%" name="filter_none_tags" value="' . esc_html(stripslashes($settings['filter_none_tags'])) . '">'; ?>
                             <p class="description">Separate tags and phrases with commas.</p>
@@ -5171,23 +5506,34 @@ class RSSRtvr_LITE_Syndicator {
                     </tr>
 
                     <tr>
-                        <th scope="row"><?php $this->showChangeBox($change_selected, 'filter_days_newer'); ?><?php echo esc_html__('Must be newer than', 'rss-retriever-lite'); ?></th>
+                        <th scope="row">
+                            <?php $this->showChangeBox($change_selected, 'filter_days_newer'); ?>
+                            <?php echo esc_html__('Must be newer than', 'rss-retriever-lite'); ?>
+                        </th>
                         <td>
                             <?php echo '<input type="number" min="0" name="filter_days_newer" value="' . esc_html(stripslashes($settings['filter_days_newer'])) . '" size="3"> day(s).'; ?>
-                            <p class="description">Specify the date of a news publication in the feed (if present). Use 0 to not filter by date.</p>
+                            <p class="description">Specify the date of a news publication in the feed (if present). Use 0 to not
+                                filter by date.</p>
                         </td>
                     </tr>
 
                     <tr>
-                        <th scope="row"><?php $this->showChangeBox($change_selected, 'filter_days_older'); ?><?php echo esc_html__('Must be older than', 'rss-retriever-lite'); ?></th>
+                        <th scope="row">
+                            <?php $this->showChangeBox($change_selected, 'filter_days_older'); ?>
+                            <?php echo esc_html__('Must be older than', 'rss-retriever-lite'); ?>
+                        </th>
                         <td>
                             <?php echo '<input type="number" min="0" name="filter_days_older" value="' . esc_html(stripslashes($settings['filter_days_older'])) . '" size="3"> day(s).'; ?>
-                            <p class="description">Specify the date of a news publication in the feed (if present). Use 0 to not filter by date.</p>
+                            <p class="description">Specify the date of a news publication in the feed (if present). Use 0 to not
+                                filter by date.</p>
                         </td>
                     </tr>
 
                     <tr>
-                        <th scope="row"><?php $this->showChangeBox($change_selected, 'filter_post_longer'); ?><?php echo esc_html__('Must be longer than', 'rss-retriever-lite'); ?></th>
+                        <th scope="row">
+                            <?php $this->showChangeBox($change_selected, 'filter_post_longer'); ?>
+                            <?php echo esc_html__('Must be longer than', 'rss-retriever-lite'); ?>
+                        </th>
                         <td>
                             <?php echo '<input type="number" min="0" name="filter_post_longer" value="' . esc_html(stripslashes($settings['filter_post_longer'])) . '" size="3"> character(s).'; ?>
                             <p class="description">Specify the the minimum post length. Use 0 for any size.</p>
@@ -5195,7 +5541,10 @@ class RSSRtvr_LITE_Syndicator {
                     </tr>
 
                     <tr>
-                        <th scope="row"><?php $this->showChangeBox($change_selected, 'filter_post_shorter'); ?><?php echo esc_html__('Must be shorter than', 'rss-retriever-lite'); ?></th>
+                        <th scope="row">
+                            <?php $this->showChangeBox($change_selected, 'filter_post_shorter'); ?>
+                            <?php echo esc_html__('Must be shorter than', 'rss-retriever-lite'); ?>
+                        </th>
                         <td>
                             <?php echo '<input type="number" min="0" name="filter_post_shorter" value="' . esc_html(stripslashes($settings['filter_post_shorter'])) . '" size="3"> character(s).'; ?>
                             <p class="description">Specify the the maximum post length. Use 0 for any size.</p>
@@ -5203,7 +5552,8 @@ class RSSRtvr_LITE_Syndicator {
                     </tr>
                 </table>
                 <br>
-                <p class="description">The filtering routine is case-insensitive and it does not match full words. Thus please be careful when using short keywords that may unintentionally match parts of other words.</p>
+                <p class="description">The filtering routine is case-insensitive and it does not match full words. Thus please
+                    be careful when using short keywords that may unintentionally match parts of other words.</p>
             </div>
             <?php
             echo '<div class="submit">';
@@ -5229,11 +5579,12 @@ class RSSRtvr_LITE_Syndicator {
             wp_nonce_field('rssrtvr_lite_xml_syndicator');
             ?>
         </form>
-    <?php
+        <?php
     }
 
-    function getUpdateTime($id) {
-        $time     = time();
+    function getUpdateTime($id)
+    {
+        $time = time();
         $interval = 60 * (int) $this->feeds[$id]['options']['interval'];
         if (isset($this->feeds_updated[$id])) {
             $updated = (int) $this->feeds_updated[$id];
@@ -5251,44 +5602,55 @@ class RSSRtvr_LITE_Syndicator {
         }
     }
 
-    function showExpertBox($settings, $full_menu = false, $change_selected = false) {
-    ?>
+    function showExpertBox($settings, $full_menu = false, $change_selected = false)
+    {
+        ?>
         <table class="form-table 
-		<?php
+        <?php
         if ($change_selected) {
             echo 'rssrtvr-form';
         }
         ?>
-		">
+        ">
             <tr>
-                <th scope="row"><?php $this->showChangeBox($change_selected, 'user_agent'); ?><?php echo esc_html__('User agent', 'rss-retriever-lite'); ?></th>
+                <th scope="row">
+                    <?php $this->showChangeBox($change_selected, 'user_agent'); ?>
+                    <?php echo esc_html__('User agent', 'rss-retriever-lite'); ?>
+                </th>
                 <td>
                     <?php
                     echo '<input type="text" style="width:100%" name="user_agent" value="' . esc_html(stripslashes($settings['user_agent'])) . '">';
                     ?>
-                    <p class="description">Use this field to set a user agent [<a href="https://www.rssretriever.com/documentation/#user-agent" target="_blank">?</a>]</p>
+                    <p class="description">Use this field to set a user agent [<a
+                            href="https://www.rssretriever.com/documentation/#user-agent" target="_blank">?</a>]</p>
                 </td>
             </tr>
 
             <tr>
-                <th scope="row"><?php $this->showChangeBox($change_selected, 'http_headers'); ?><?php echo esc_html__('HTTP headers', 'rss-retriever-lite'); ?></th>
+                <th scope="row">
+                    <?php $this->showChangeBox($change_selected, 'http_headers'); ?>
+                    <?php echo esc_html__('HTTP headers', 'rss-retriever-lite'); ?>
+                </th>
                 <td>
                     <?php
                     echo '<textarea cols="90" rows="10" wrap="off" name="http_headers" style="margin:0;height:10em;width:100%;">' . esc_html(stripslashes($settings['http_headers'])) . '</textarea>';
                     ?>
-                    <p class="description">HTTP headers from a request follow this basic structure of an HTTP header: a case-insensitive string followed
+                    <p class="description">HTTP headers from a request follow this basic structure of an HTTP header: a
+                        case-insensitive string followed
                         by a colon (':') and a value whose structure depends upon the header. One header per line.</p>
                 </td>
             </tr>
 
         </table>
-    <?php
+        <?php
     }
 
-    function showMainPage($showsettings = true) {
-    ?>
+    function showMainPage($showsettings = true)
+    {
+        ?>
         <div class="metabox-holder postbox-container" style="width:100%;">
-            <form style="padding: 22px 12px 22px 12px; margin-bottom: 24px;" action="<?php echo esc_url(rssrtvr_lite_REQUEST_URI()); ?>" method="post">
+            <form style="padding: 22px 12px 22px 12px; margin-bottom: 24px;"
+                action="<?php echo esc_url(rssrtvr_lite_REQUEST_URI()); ?>" method="post">
                 <div style="display: flex; justify-content: space-between; width: 100%;">
                     <div style="align-self: center;"><strong>New RSS URL</strong></div>
 
@@ -5297,7 +5659,9 @@ class RSSRtvr_LITE_Syndicator {
                     </div>
 
                     <div style="align-self: center;">
-                        <input class="button-primary" name="new_feed" value="<?php echo esc_attr__('&nbsp; Syndicate &raquo; &nbsp;', 'rss-retriever-lite'); ?>" type="submit">
+                        <input class="button-primary" name="new_feed"
+                            value="<?php echo esc_attr__('&nbsp; Syndicate &raquo; &nbsp;', 'rss-retriever-lite'); ?>"
+                            type="submit">
                     </div>
                 </div>
                 <?php wp_nonce_field('rssrtvr_lite_xml_syndicator'); ?>
@@ -5308,7 +5672,7 @@ class RSSRtvr_LITE_Syndicator {
                 if (count($this->feeds) > 0) {
                     $display_feeds = [];
                     for ($i = 0; $i < count($this->feeds); $i++) {
-                        $feed_item  = '<tr>';
+                        $feed_item = '<tr>';
                         $feed_item .= '<th><input name="feed_ids[]" value="' . $i . '" type="checkbox" id="f' . $i . '"></th>';
                         $edit_url = wp_nonce_url(rssrtvr_lite_REQUEST_URI() . '&edit-feed-id=' . $i, 'rssrtvr_lite_xml_syndicator');
                         $feed_item .= '<td><label for="f' . $i . '">' . esc_html($this->feeds[$i]['title']) . ' [<a href="' . esc_url($edit_url) . '">edit</a>]</label></td>';
@@ -5324,7 +5688,7 @@ class RSSRtvr_LITE_Syndicator {
                         } else {
                             $feed_item .= '<td> - </td>';
                         }
-                        $feed_item      .= '</tr>';
+                        $feed_item .= '</tr>';
                         $display_feeds[] = '<!--' . $this->feeds[$i]['title'] . $i . '-->' . $feed_item . PHP_EOL;
                     }
                     echo '<table class="widefat" style="margin-top: .5em" width="100%">';
@@ -5341,17 +5705,17 @@ class RSSRtvr_LITE_Syndicator {
                             $item = str_replace('<tr>', '<tr class="alternate">', $item);
                         }
                         echo wp_kses($item, [
-                            'tr'     => ['class' => []],
-                            'th'     => ['scope' => [], 'style' => []],
-                            'td'     => ['style' => []],
-                            'label'  => ['for' => []],
-                            'a'      => ['href' => [], 'target' => []],
-                            'input'  => ['name' => [], 'value' => [], 'type' => [], 'id' => [], 'onclick' => []],
-                            'table'  => ['class' => [], 'style' => [], 'width' => []],
+                            'tr' => ['class' => []],
+                            'th' => ['scope' => [], 'style' => []],
+                            'td' => ['style' => []],
+                            'label' => ['for' => []],
+                            'a' => ['href' => [], 'target' => []],
+                            'input' => ['name' => [], 'value' => [], 'type' => [], 'id' => [], 'onclick' => []],
+                            'table' => ['class' => [], 'style' => [], 'width' => []],
                         ]);
                     }
                     echo '</table>';
-                ?>
+                    ?>
                     &nbsp;
                     <table width="100%">
                         <tr>
@@ -5386,7 +5750,7 @@ class RSSRtvr_LITE_Syndicator {
                             </td>
                         </tr>
                     </table>
-                <?php
+                    <?php
                 }
                 ?>
                 <table width="100%">
@@ -5411,10 +5775,11 @@ class RSSRtvr_LITE_Syndicator {
             }
             ?>
         </div>
-<?php
+        <?php
     }
 
-    function enqueue_scripts($hook) {
+    function enqueue_scripts($hook)
+    {
         if (
             $hook !== 'toplevel_page_rssretriever_lite' &&
             $hook !== 'rss-retriever-lite_page_rssrtvr_lite_general_settings' &&
@@ -5445,12 +5810,12 @@ class RSSRtvr_LITE_Syndicator {
         wp_enqueue_script('jquery-ui-sortable');
         wp_enqueue_script('codemirror-autorefresh');
 
-        $args       = [
-            'public'   => true,
+        $args = [
+            'public' => true,
             '_builtin' => false,
         ];
         $taxonomies = get_taxonomies($args, 'objects', 'and');
-        $map        = [];
+        $map = [];
 
         foreach ($taxonomies as $taxonomy) {
             foreach ($taxonomy->object_type as $object_type) {
@@ -5468,10 +5833,11 @@ class RSSRtvr_LITE_Syndicator {
         );
     }
 
-    function cron_init() {
+    function cron_init()
+    {
         if (get_option(RSSRTVR_LITE_RSS_PULL_MODE) === 'auto') {
             add_action('rssrtvr_lite_update_by_wp_cron', [$this, 'update_feeds']);
-            if (! wp_next_scheduled('rssrtvr_lite_update_by_wp_cron')) {
+            if (!wp_next_scheduled('rssrtvr_lite_update_by_wp_cron')) {
                 wp_schedule_event(time(), RSSRTVR_LITE_PC_NAME, 'rssrtvr_lite_update_by_wp_cron');
             }
         } elseif (function_exists('wp_clear_scheduled_hook') && wp_next_scheduled('rssrtvr_lite_update_by_wp_cron')) {
@@ -5486,14 +5852,14 @@ if (is_admin()) {
 
 $rssrtvr_lite = new RSSRtvr_LITE_Syndicator();
 
-if (! is_admin()) {
+if (!is_admin()) {
     add_action('wp_loaded', [$rssrtvr_lite, 'cron_init']);
     add_filter('cron_schedules', [$rssrtvr_lite, 'add_custom_cron_interval']);
 
     $pull_feeds = isset($_GET['pull-feeds']) ? sanitize_text_field(wp_unslash($_GET['pull-feeds'])) : '';
 
     if ($pull_feeds === get_option('RSSRTVR_LITE_CRON_MAGIC')) {
-        if (! function_exists('wp_insert_category')) {
+        if (!function_exists('wp_insert_category')) {
             require_once ABSPATH . 'wp-admin/includes/taxonomy.php';
         }
 
@@ -5531,7 +5897,8 @@ if (! is_admin()) {
     }
 }
 
-function rssrtvr_lite_main_menu() {
+function rssrtvr_lite_main_menu()
+{
     add_menu_page(
         esc_html__('RSS Syndicator', 'rss-retriever-lite'),
         esc_html__('RSS Retriever Lite', 'rss-retriever-lite'),
