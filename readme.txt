@@ -1,9 +1,9 @@
 === RSS Retriever Lite ===
 Tags: rss, autoblogging, polylang, wpml, woocommerce
 Requires at least: 5.0
-Tested up to: 7.0.1
+Tested up to: 7.0.2
 Requires PHP: 7.4
-Stable tag: 1.2.1
+Stable tag: 1.2.2
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -166,6 +166,10 @@ language codes. These services are used only if the user configures an API key.
 
 == Changelog ==
 
+= 1.2.2 =
+
+* Enhanced Atom feed parser reliability: fixed conflict with existing CDATA tags inside content blocks to prevent XML parsing errors.
+
 = 1.2.1 =
 * Improved support for Atom feeds containing raw HTML content.
 
@@ -188,6 +192,10 @@ language codes. These services are used only if the user configures an API key.
 * Initial release
 
 == Upgrade Notice ==
+
+= 1.2.2 =
+
+* Enhanced Atom feed parser reliability: fixed conflict with existing CDATA tags inside content blocks to prevent XML parsing errors.
 
 = 1.2.1 =
 * Improved support for Atom feeds containing raw HTML content.

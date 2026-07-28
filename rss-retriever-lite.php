@@ -1,7 +1,7 @@
 <?php
 /*
 Plugin Name: RSS Retriever Lite
-Version: 1.2.1
+Version: 1.2.2
 Description: RSS Retriever Lite is a lightweight WordPress plugin for importing and managing RSS and Atom feeds. It supports Google and Yandex product feeds, YouTube and Vimeo video feeds, automatic updates, scheduling, filtering, translation, and integration with WooCommerce, Polylang and WPML.
 Author: RSS Retriever Team
 Plugin URI: https://www.rssretriever.com/
@@ -2556,16 +2556,31 @@ class RSSRtvr_LITE_Syndicator
                     }
                 }
                 
-                if (!$is_atom_content && preg_match('/(<content\b[^>]*>)(.*?)(<\/content>)/i', $line) && stripos($line, '<![CDATA[') === false) {
+                if ($is_atom_content) {
+                    if ($added_cdata && stripos($line, ']]>') !== false) {
+                        $added_cdata = false;
+                    }
+
+                    if (stripos($line, '</content>') !== false) {
+                        $is_atom_content = false;
+                        if ($added_cdata) {
+                            $line = str_ireplace('</content>', ']]></content>', $line);
+                            $added_cdata = false;
+                        }
+                    }
+                } 
+                elseif (preg_match('/(<content\b[^>]*>)(.*?)(<\/content>)/i', $line) && stripos($line, '<![CDATA[') === false) {
                     $line = preg_replace('/(<content\b[^>]*>)(.*?)(<\/content>)/i', '$1<![CDATA[$2]]$3', $line);
-                }
-                elseif (!$is_atom_content && preg_match('/<content\b[^>]*>/i', $line) && stripos($line, '</content>') === false && stripos($line, '<![CDATA[') === false) {
+                } 
+                elseif (preg_match('/<content\b[^>]*>/i', $line) && stripos($line, '</content>') === false) {
                     $is_atom_content = true;
-                    $line = preg_replace('/(<content\b[^>]*>)/i', '$1<![CDATA[', $line);
-                }
-                elseif ($is_atom_content && stripos($line, '</content>') !== false) {
-                    $is_atom_content = false;
-                    $line = str_ireplace('</content>', ']]></content>', $line);
+
+                    if (stripos($line, '<![CDATA[') === false) {
+                        $line = preg_replace('/(<content\b[^>]*>)/i', '$1<![CDATA[', $line);
+                        $added_cdata = true;
+                    } else {
+                        $added_cdata = false;
+                    }
                 }
 
                 xml_parse($xml_parser, $line . PHP_EOL);
