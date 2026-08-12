@@ -1,9 +1,9 @@
 === RSS Retriever Lite ===
 Tags: rss, autoblogging, polylang, wpml, woocommerce
 Requires at least: 5.0
-Tested up to: 7.0.2
+Tested up to: 7.0.3
 Requires PHP: 7.4
-Stable tag: 1.2.2
+Stable tag: 1.2.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -95,7 +95,7 @@ Yes. YouTube video feeds are supported.
 For YouTube, you need to use the official feed URLs that Google still provides.
 
 Examples:
-- https://www.youtube.com/feeds/videos.xml?channel_id=UC_x5XG1OV2P6uZZ5FSM9Ttw
+- https://www.youtube.com/feeds/videos.xml?channel_id=UC_UqGjJSDND2t7jhKIj3PPA
 - https://www.youtube.com/feeds/videos.xml?playlist_id=PL41UI99jyjP9eu9M76TIwQ-ihpvr7cs9n
 
 When adding such a feed, go to the feed settings **Media handling** in the dropdown **Post thumbnails**, select **Create from media attachment**. YouTube provides thumbnails via `<media:thumbnail>` in the feed (as media attachments), so this option ensures that each imported post gets a proper WordPress featured image.
@@ -166,6 +166,10 @@ language codes. These services are used only if the user configures an API key.
 
 == Changelog ==
 
+= 1.2.3 =
+
+* Minor improvements.
+
 = 1.2.2 =
 
 * Enhanced Atom feed parser reliability: fixed conflict with existing CDATA tags inside content blocks to prevent XML parsing errors.
@@ -192,6 +196,10 @@ language codes. These services are used only if the user configures an API key.
 * Initial release
 
 == Upgrade Notice ==
+
+= 1.2.3 =
+
+* Minor improvements.
 
 = 1.2.2 =
 

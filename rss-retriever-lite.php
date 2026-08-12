@@ -1,7 +1,7 @@
 <?php
 /*
 Plugin Name: RSS Retriever Lite
-Version: 1.2.2
+Version: 1.2.3
 Description: RSS Retriever Lite is a lightweight WordPress plugin for importing and managing RSS and Atom feeds. It supports Google and Yandex product feeds, YouTube and Vimeo video feeds, automatic updates, scheduling, filtering, translation, and integration with WooCommerce, Polylang and WPML.
 Author: RSS Retriever Team
 Plugin URI: https://www.rssretriever.com/
@@ -129,7 +129,14 @@ function rssrtvr_lite_file_get_contents($url, $as_array = false, $headers = fals
                 $line = trim($line);
                 if (strpos($line, ':') !== false) {
                     list($key, $value) = explode(':', $line, 2);
-                    $headers_array[trim($key)] = trim($value);
+                    $key_clean = trim($key);
+                    $key_lower = strtolower($key_clean);
+                    
+                    if ($key_lower === 'user-agent' || $key_lower === 'referer') {
+                        continue;
+                    }
+                    
+                    $headers_array[$key_clean] = trim($value);
                 }
             }
         }
@@ -148,18 +155,17 @@ function rssrtvr_lite_file_get_contents($url, $as_array = false, $headers = fals
             $headers_array['Referer'] = $referrer;
         }
 
+        $args = [
+            'headers'     => $headers_array,
+            'timeout'     => 15,
+            'redirection' => RSSRTVR_LITE_MAX_CURL_REDIRECTS,
+        ];
+
         if (strlen($ua)) {
-            $headers_array['User-Agent'] = $ua;
+            $args['user-agent'] = $ua;
         }
 
-        $response = wp_remote_get(
-            $url,
-            [
-                'headers' => $headers_array,
-                'timeout' => 15,
-                'redirection' => RSSRTVR_LITE_MAX_CURL_REDIRECTS,
-            ]
-        );
+        $response = wp_remote_get($url, $args);
 
         if (is_wp_error($response)) {
             if (isset($rssrtvr_lite)) {
@@ -184,7 +190,7 @@ function rssrtvr_lite_file_get_contents($url, $as_array = false, $headers = fals
         $content = explode("\n", trim($content));
     }
 
-    return $content;
+    return $content ?? false;
 }
 
 function rssrtvr_lite_get_header_field_value($header, $field)
@@ -209,7 +215,7 @@ function rssrtvr_lite_get_headers($url)
 {
     global $rssrtvr;
 
-    $ua = isset($rssrtvr->current_feed['options']['user_agent']) ? $rssrtvr->current_feed['options']['user_agent'] : '';
+    $ua = $rssrtvr->current_feed['options']['user_agent'] ?? '';
 
     if (wp_parse_url($url, PHP_URL_SCHEME) === null || wp_parse_url($url, PHP_URL_SCHEME) === '') {
         return false;
@@ -2490,7 +2496,7 @@ class RSSRtvr_LITE_Syndicator
         if (preg_match('/body.*?(\{direction:ltr.*?\})/is', $content, $matches)) {
             $content = str_replace($matches[1], '', $content);
         }
-
+        
         try {
             $xml = @new SimpleXMLElement($content, LIBXML_NOCDATA);
 
@@ -2528,11 +2534,9 @@ class RSSRtvr_LITE_Syndicator
 
             $do_mb_convert_encoding = ($this->current_feed['options']['convert_encoding'] === 'on' && $this->feed_charset !== 'not defined' && $this->blog_charset !== strtoupper($this->feed_charset));
             $do_uft8_encoding = ($this->current_feed['options']['utf8_encoding'] === 'on' && $this->blog_charset === 'UTF-8');
-
-            $is_flvembed = false;
-            $is_atom_content = false;
+            $is_html_content = false;
             $this->xml_parse_error = 0;
-
+            
             foreach ($rss_lines as $line) {
                 $line = rtrim($line);
                 if ($this->count >= $this->max || $this->failure) {
@@ -2545,41 +2549,26 @@ class RSSRtvr_LITE_Syndicator
                 if ($do_mb_convert_encoding) {
                     $line = iconv($this->feed_charset, $this->blog_charset, $line);
                 }
-
-                if (mb_strtolower(trim($line)) === '<flv_embed>') {
-                    $is_flvembed = true;
-                } elseif ($is_flvembed) {
-                    if (mb_strtolower(trim($line)) === '</flv_embed>') {
-                        $is_flvembed = false;
-                    } elseif (stripos(trim($line), '<![CDATA[') === false && stripos(trim($line), ']]>') === false) {
-                        $line = '<![CDATA[' . esc_html(trim($line)) . ']]>';
-                    }
-                }
                 
-                if ($is_atom_content) {
-                    if ($added_cdata && stripos($line, ']]>') !== false) {
-                        $added_cdata = false;
-                    }
+                if (preg_match('/<content\s[^>]*type=["\']html["\'][^>]*>/i', $line, $matches)) {
+                    $is_html_content = true;
+                    $tag = $matches[0];
 
                     if (stripos($line, '</content>') !== false) {
-                        $is_atom_content = false;
-                        if ($added_cdata) {
-                            $line = str_ireplace('</content>', ']]></content>', $line);
-                            $added_cdata = false;
+                        $is_html_content = false;
+
+                        if (stripos($line, '<![CDATA[') === false) {
+                            $line = str_ireplace([$tag, '</content>'], [$tag . '<![CDATA[', ']]></content>'], $line);
+                        }
+                    } else {
+                        if (stripos($line, '<![CDATA[') === false) {
+                            $line = str_ireplace($tag, $tag . '<![CDATA[', $line);
                         }
                     }
-                } 
-                elseif (preg_match('/(<content\b[^>]*>)(.*?)(<\/content>)/i', $line) && stripos($line, '<![CDATA[') === false) {
-                    $line = preg_replace('/(<content\b[^>]*>)(.*?)(<\/content>)/i', '$1<![CDATA[$2]]$3', $line);
-                } 
-                elseif (preg_match('/<content\b[^>]*>/i', $line) && stripos($line, '</content>') === false) {
-                    $is_atom_content = true;
-
-                    if (stripos($line, '<![CDATA[') === false) {
-                        $line = preg_replace('/(<content\b[^>]*>)/i', '$1<![CDATA[', $line);
-                        $added_cdata = true;
-                    } else {
-                        $added_cdata = false;
+                } elseif ($is_html_content) {
+                    if (stripos($line, '</content>') !== false) {
+                        $is_html_content = false;
+                        $line = str_ireplace('</content>', ']]></content>', $line);
                     }
                 }
 
@@ -3187,13 +3176,13 @@ class RSSRtvr_LITE_Syndicator
                     $this->post['tags_input'] = array_merge($this->post['tags_input'], explode(',', trim($data)));
                     break;
                 case 'GUID':
-                    $this->post['guid'] .= trim($data);
-                    break;
                 case 'ID':
-                    $this->post['guid'] .= trim($data);
-                    break;
                 case 'ATOM:ID':
-                    $this->post['guid'] .= trim($data);
+                    if (isset($this->post['guid'])) {
+                        $this->post['guid'] .= trim($data);
+                    } else {
+                        $this->post['guid'] = trim($data);
+                    }
                     break;
                 case 'DC:DATE':
                     $this->post['post_date'] = $this->parse_w3cdtf($data);
@@ -5648,7 +5637,7 @@ class RSSRtvr_LITE_Syndicator
                 </th>
                 <td>
                     <?php
-                    echo '<textarea cols="90" rows="10" wrap="off" name="http_headers" style="margin:0;height:10em;width:100%;">' . esc_html(stripslashes($settings['http_headers'])) . '</textarea>';
+                    echo '<textarea cols="90" rows="10" wrap="off" spellcheck="false" name="http_headers" style="margin:0;height:10em;width:100%;">' . esc_html(stripslashes($settings['http_headers'])) . '</textarea>';
                     ?>
                     <p class="description">HTTP headers from a request follow this basic structure of an HTTP header: a
                         case-insensitive string followed
