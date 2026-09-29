@@ -1,9 +1,9 @@
 === RSS Retriever Lite ===
 Tags: rss, autoblogging, polylang, wpml, woocommerce
 Requires at least: 5.0
-Tested up to: 7.0.3
+Tested up to: 7.1.2
 Requires PHP: 7.4
-Stable tag: 1.2.3
+Stable tag: 1.3.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -39,7 +39,7 @@ RSS Retriever Lite is a robust, lightweight feed importer for WordPress designed
 - RSS media attachment support
 - PNG image conversion to JPEG and WebP
 - WordPress media library integration
-- HTML cleanup and sanitization
+- Optional HTML cleanup and sanitization
 - Custom HTML tag removal
 - Custom user-agent and HTTP header support
 
@@ -166,6 +166,10 @@ language codes. These services are used only if the user configures an API key.
 
 == Changelog ==
 
+= 1.3.0 =
+
+* Added "Delete data on uninstall" setting option.
+
 = 1.2.3 =
 
 * Minor improvements.
@@ -196,6 +200,10 @@ language codes. These services are used only if the user configures an API key.
 * Initial release
 
 == Upgrade Notice ==
+
+= 1.3.0 =
+
+* Added "Delete data on uninstall" setting option.
 
 = 1.2.3 =
 

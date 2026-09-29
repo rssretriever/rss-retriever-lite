@@ -1,7 +1,7 @@
 <?php
 /*
 Plugin Name: RSS Retriever Lite
-Version: 1.2.3
+Version: 1.3.0
 Description: RSS Retriever Lite is a lightweight WordPress plugin for importing and managing RSS and Atom feeds. It supports Google and Yandex product feeds, YouTube and Vimeo video feeds, automatic updates, scheduling, filtering, translation, and integration with WooCommerce, Polylang and WPML.
 Author: RSS Retriever Team
 Plugin URI: https://www.rssretriever.com/
@@ -13,6 +13,38 @@ Text Domain: rss-retriever-lite
 
 if (!defined('ABSPATH')) {
     die('This file cannot be accessed directly.');
+}
+
+function rssrtvr_lite_uninstall_callback() {
+    if (get_option('rssrtvr_complete_uninstall') !== 'on') {
+        return;
+    }
+
+    $options = [
+        'cron_magic', 
+        'checkdate',
+        'post_life_check_date',
+        'accaunts',
+        'feed_options',
+        'feeds_updated',
+        'syndicated_feeds',
+        'rss_pull_mode',
+        'pseudo_cron_interval',
+        'feed_pull_time',
+        'max_exec_time',
+        'parse_feed_log',
+        'keep_images',
+        'lite_custom_interval',
+        'complete_uninstall'
+    ];
+
+    foreach ($options as $option) {
+        delete_option('rssrtvr_' . $option);
+    }
+}
+
+if (is_admin()) {
+    register_uninstall_hook(__FILE__, 'rssrtvr_lite_uninstall_callback');
 }
 
 const RSSRTVR_LITE_CRON_MAGIC = 'rssrtvr_cron_magic';
@@ -34,6 +66,7 @@ const RSSRTVR_LITE_LOG = 'rssrtvr_parse_feed_log';
 const RSSRTVR_LITE_KEEP_IMAGES = 'rssrtvr_keep_images';
 const RSSRTVR_LITE_PC_NAME = 'rssrtvr_lite_custom_interval';
 const RSSRTVR_LITE_BLOCK_DIVIDER = '825670622173';
+const RSSRTVR_LITE_COMPLETE_UNINSTALL = 'rssrtvr_complete_uninstall';
 
 function rssrtvr_lite_fixurl($url)
 {
@@ -614,6 +647,7 @@ function rssrtvr_lite_default_options()
         RSSRTVR_LITE_PC_INTERVAL => 2 * RSSRTVR_LITE_MIN_UPDATE_TIME,
         RSSRTVR_LITE_FEED_PULL_TIME => 0,
         RSSRTVR_LITE_KEEP_IMAGES => 'on',
+        RSSRTVR_LITE_COMPLETE_UNINSTALL => ''
     ];
 
     foreach ($defaults as $name => $val) {
@@ -1214,6 +1248,7 @@ function rssrtvr_lite_options_menu()
         }
 
         update_option(RSSRTVR_LITE_KEEP_IMAGES, isset($_POST[RSSRTVR_LITE_KEEP_IMAGES]) ? 'on' : '');
+        update_option(RSSRTVR_LITE_COMPLETE_UNINSTALL, isset($_POST[RSSRTVR_LITE_COMPLETE_UNINSTALL]) ? 'on' : '');
         echo '<div id="message" class="notice updated"><p><strong>Settings saved.</strong></p></div>';
     }
     ?>
@@ -1261,6 +1296,19 @@ function rssrtvr_lite_options_menu()
                                     size="5" value="<?php echo esc_attr(get_option(RSSRTVR_LITE_MAX_EXEC_TIME)); ?>">
                                 <p class="description">Maximum PHP execution time, given to RSS Retriever Lite to execute
                                     all operations. If set to zero, no time limit is imposed.</p>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row">Delete data on uninstall</th>
+                            <td>
+                                <input type="checkbox" id="dou" name="<?php echo RSSRTVR_LITE_COMPLETE_UNINSTALL; ?>"
+                                <?php
+                                if (get_option(RSSRTVR_LITE_COMPLETE_UNINSTALL) === 'on') {
+                                    echo "checked";
+                                }
+                                ?> />
+                                <label for="dou">permanently erase all RSS Retriever Lite settings, feeds, and associated data from the database upon uninstallation.</label>
+                                <p class="description">Leave unchecked to keep your settings and feeds when upgrading to <a href="https://www.rssretriever.com/" target="_blank">RSS Retriever</a> (full version with AI support).</p>
                             </td>
                         </tr>
                     </table>
@@ -4532,7 +4580,9 @@ class RSSRtvr_LITE_Syndicator
                         <td>
                             <select name="post_type" id="rssrtvr-lite-post-type">
                                 <?php
-                                $post_types = get_post_types();
+                                $post_types = get_post_types(['public' => true]);
+                                unset($post_types['attachment']);
+                                
                                 foreach ($post_types as $post_type) {
                                     echo '<option ' . esc_html(selected($settings['post_type'], $post_type, false)) . ' value="' . esc_html(esc_attr($post_type)) . '">' . esc_html(esc_html($post_type)) . '</option>';
                                 }
@@ -5038,7 +5088,7 @@ class RSSRtvr_LITE_Syndicator
                         <td>
                             <?php
                             echo '<input type="checkbox" name="use_fifu" id="use_fifu" ' . (($settings['use_fifu'] === 'on') ? 'checked ' : '') . '>';
-                            echo '<label for="use_fifu">when checked, the post thumbnail won\'t be stored locally. It will be hotlinked and displayed by the <a href="https://wordpress.org/plugins/featured-image-from-url/" target="_blank">FIFU</a> plugin, which must be installed and activated.</label>';
+                            echo '<label for="use_fifu">when checked, the post thumbnail won\'t be stored locally. It will be hotlinked and displayed by the <b><a href="https://wordpress.org/plugins/featured-image-from-url/" target="_blank">FIFU</a></b> plugin, which must be installed and activated.</label>';
                             if (!function_exists('fifu_dev_set_image')) {
                                 echo '<p class="description" id="fifu_warning">&#x26A0; FIFU is not detected. If you enable this option, the post thumbnail will not be generated. Please install and activate FIFU first.</p>';
                             }
@@ -5163,7 +5213,7 @@ class RSSRtvr_LITE_Syndicator
                         <td>
                             <div style="padding: 1em; background: #f9f9f9; border: 1px solid #ddd; border-radius: 4px;">
                                 <ul style="margin-top: 0.5em;">
-                                    <li><code>%link%</code> – <?php echo esc_html__('Post link (URL)', 'rss-retriever-lite'); ?>
+                                    <li><code>%link%</code> – <?php echo esc_html__('Post source link (URL)', 'rss-retriever-lite'); ?>
                                     </li>
                                     <li><code>%post_title%</code> –
                                         <?php echo esc_html__('Post title', 'rss-retriever-lite'); ?>
