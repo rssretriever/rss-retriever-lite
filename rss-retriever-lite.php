@@ -1,11 +1,11 @@
 <?php
 /*
-Plugin Name: RSS Retriever Lite
-Version: 1.3.0
-Description: RSS Retriever Lite is a lightweight WordPress plugin for importing and managing RSS and Atom feeds. It supports Google and Yandex product feeds, YouTube and Vimeo video feeds, automatic updates, scheduling, filtering, translation, and integration with WooCommerce, Polylang and WPML.
+Plugin Name: RSS Retriever
+Version: 1.3.1
+Description: RSS Retriever is a lightweight WordPress plugin for importing and managing RSS and Atom feeds. It supports Google and Yandex product feeds, YouTube and Vimeo video feeds, automatic updates, scheduling, filtering, translation, and integration with WooCommerce, Polylang and WPML.
 Author: RSS Retriever Team
 Plugin URI: https://www.rssretriever.com/
-Author URI: https://www.rssretriever.com/
+Author URI: https://www.cyberplugins.com/
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 Text Domain: rss-retriever-lite
@@ -2521,10 +2521,16 @@ class RSSRtvr_LITE_Syndicator
         $content = rssrtvr_lite_file_get_contents($feed_url);
 
         if (strpos($content, 'PK') === 0) {
-            $content = rssrtvr_lite_unzip($content);
-        } elseif (strpos($content, "\x1f\x8b\x08") === 0 || (strpos($content, "\x78\x01") === 0 || strpos($content, "\x78\x9c") === 0 || strpos($content, "\x78\xda") === 0)) {
+            $content = rssrtvr_unzip($content);
+        } elseif (strpos($content, "\x1f\x8b\x08") === 0) {
+            $content = @gzdecode($content);
+        } elseif (
+            strpos($content, "\x78\x01") === 0 ||
+            strpos($content, "\x78\x9c") === 0 ||
+            strpos($content, "\x78\xda") === 0
+        ) {
             $content = @gzuncompress($content);
-        } elseif (strpos($content, "\x45\x5a\x68") === 0) {
+        } elseif (strpos($content, "\x42\x5a\x68") === 0) {
             $content = @bzdecompress($content);
         }
 

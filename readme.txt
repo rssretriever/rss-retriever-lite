@@ -1,9 +1,9 @@
-=== RSS Retriever Lite ===
+=== RSS Retriever ===
 Tags: rss, autoblogging, polylang, wpml, woocommerce
 Requires at least: 5.0
-Tested up to: 7.1.2
+Tested up to: 7.1.3
 Requires PHP: 7.4
-Stable tag: 1.3.0
+Stable tag: 1.3.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -11,11 +11,11 @@ Lightweight feed importer for WordPress with support for RSS, Atom, Google Produ
 
 == Description ==
 
-RSS Retriever Lite is a feed importer for WordPress. It allows you to import and publish content from various feed sources directly into your site.
+RSS Retriever is a feed importer for WordPress. It allows you to import and publish content from various feed sources directly into your site.
 
 **Features:**
 
-RSS Retriever Lite is a robust, lightweight feed importer for WordPress designed to handle everything from standard blogs to complex WooCommerce product feeds.
+RSS Retriever is a robust, lightweight feed importer for WordPress designed to handle everything from standard blogs to complex WooCommerce product feeds.
 
 - Full support for RSS and Atom feeds
 - YouTube video feeds (channels and playlists)
@@ -166,6 +166,10 @@ language codes. These services are used only if the user configures an API key.
 
 == Changelog ==
 
+= 1.3.1 =
+
+* Fixed: Import of gzip-compressed feeds, and detection of bzip2-compressed feeds.
+
 = 1.3.0 =
 
 * Added "Delete data on uninstall" setting option.
@@ -200,6 +204,10 @@ language codes. These services are used only if the user configures an API key.
 * Initial release
 
 == Upgrade Notice ==
+
+= 1.3.1 =
+
+* Fixed: Import of gzip-compressed feeds, and detection of bzip2-compressed feeds.
 
 = 1.3.0 =
 
